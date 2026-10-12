@@ -12,23 +12,23 @@ let convs: ConversationDTO[] = [
   {
     id: 101, status: "open", unread: 3, updatedAt: ago(2), createdAt: 0, ticket: null, name: "ສົມໃຈ ວົງສະຫວັນ", subtitle: "Front Office · 101",
     preview: "Wi-Fi ຢູ່ເຄົາເຕີຕ້ອນຮັບໃຊ້ບໍ່ໄດ້ ແຂກກຳລັງລໍຖ້າເຊັກອິນ", previewFromContact: true,
-    labels: ["cosi-network", "cosi-computer", "cosi-urgent"], closedTopics: [], assignee: null,
+    labels: ["cosi-network", "cosi-computer", "cosi-urgent"], closedTopics: [], autoGreetedAt: 0, assignee: null,
   },
   {
     id: 102, status: "open", unread: 1, updatedAt: ago(14), createdAt: 0, ticket: null, name: "Khamla Phommachan", subtitle: "Housekeeping · 205",
-    preview: "Printer on floor 2 is not printing", previewFromContact: true, labels: ["cosi-computer", "cosi-account"], closedTopics: ["cosi-account"], assignee: ME,
+    preview: "Printer on floor 2 is not printing", previewFromContact: true, labels: ["cosi-computer", "cosi-account"], closedTopics: ["cosi-account"], autoGreetedAt: 0, assignee: ME,
   },
   {
     id: 103, status: "open", unread: 0, updatedAt: ago(41), createdAt: 0, ticket: null, name: "ນ້ອຍ ສີວິໄລ", subtitle: "Accounting",
-    preview: "ກຳລັງກວດສອບໃຫ້ ລໍຖ້າສັກຄູ່", previewFromContact: false, labels: ["cosi-pms"], closedTopics: [], assignee: ME,
+    preview: "ກຳລັງກວດສອບໃຫ້ ລໍຖ້າສັກຄູ່", previewFromContact: false, labels: ["cosi-pms"], closedTopics: [], autoGreetedAt: 0, assignee: ME,
   },
   {
     id: 104, status: "open", unread: 2, updatedAt: ago(75), createdAt: 0, ticket: null, name: "Somsack", subtitle: "Security · 330",
-    preview: "ກ້ອງຊັ້ນ 3 ບໍ່ຕິດ ມີພາບດຳ", previewFromContact: true, labels: ["cosi-cctv"], closedTopics: [], assignee: null,
+    preview: "ກ້ອງຊັ້ນ 3 ບໍ່ຕິດ ມີພາບດຳ", previewFromContact: true, labels: ["cosi-cctv"], closedTopics: [], autoGreetedAt: 0, assignee: null,
   },
   {
     id: 105, status: "resolved", unread: 0, updatedAt: ago(60 * 20), createdAt: 0, ticket: null, name: "Vilay", subtitle: "F&B · 112",
-    preview: "ຂອບໃຈ ໃຊ້ໄດ້ແລ້ວ", previewFromContact: true, labels: ["cosi-account"], closedTopics: [], assignee: ME,
+    preview: "ຂອບໃຈ ໃຊ້ໄດ້ແລ້ວ", previewFromContact: true, labels: ["cosi-account"], closedTopics: [], autoGreetedAt: 0, assignee: ME,
   },
 ];
 

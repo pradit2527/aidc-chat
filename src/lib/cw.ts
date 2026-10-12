@@ -98,6 +98,7 @@ export function toConversation(raw: unknown): ConversationDTO {
     previewFromContact: fromContact,
     labels: arr(c.labels).filter((l): l is string => typeof l === "string"),
     closedTopics,
+    autoGreetedAt: Math.floor(Date.parse(str(obj(c.custom_attributes).auto_greeted_at)) / 1000) || 0,
     assignee: num(assignee.id) ? { id: num(assignee.id), name: str(assignee.name) } : null,
   };
 }
@@ -124,7 +125,8 @@ export function toMessage(raw: unknown): MessageDTO {
     kind,
     content: str(m.content),
     private: m.private === true,
-    senderName: str(obj(m.sender).name),
+    // ข้อความขาออกที่ไม่มีผู้ส่ง = ข้อความอัตโนมัติของ Chatwoot (ต้อนรับ/บอท) → แสดงเป็น "Bot" แทน "คุณ"
+    senderName: str(obj(m.sender).name) || (kind === "outgoing" && !m.sender ? "Bot" : ""),
     attachments,
   };
 }

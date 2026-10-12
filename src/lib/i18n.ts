@@ -98,7 +98,7 @@ const M = {
   qrInvalid: { lo: "ລິ້ງບໍ່ຖືກຕ້ອງ (ຕ້ອງຂຶ້ນຕົ້ນດ້ວຍ http:// ຫຼື https://)", en: "Invalid link (must start with http:// or https://)" },
 
   // ---- คอนโซลทีมไอที (/admin) ----
-  admTitle: { lo: "ລະບົບຕອບແຊັດໄອທີ", en: "IT Reply Console" },
+  admTitle: { lo: "Ticket Support", en: "Ticket Support" },
   admBrand: { lo: "IT Helpdesk", en: "IT Helpdesk" },
   admLoginTitle: { lo: "ເຂົ້າສູ່ລະບົບທີມໄອທີ", en: "IT team sign in" },
   admLoginHint: {

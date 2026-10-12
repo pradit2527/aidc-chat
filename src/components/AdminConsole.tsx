@@ -117,7 +117,12 @@ async function fetchConversations(
     );
     // ป้องกันข้อมูลจากเซิร์ฟเวอร์ที่ขาดฟิลด์ (เช่น เซิร์ฟเวอร์เวอร์ชันเก่ากว่าหน้าจอ) ไม่ให้ทั้งหน้าล่ม
     for (const c of r.conversations) {
-      byId.set(c.id, { ...c, labels: c.labels ?? [], closedTopics: c.closedTopics ?? [] });
+      byId.set(c.id, {
+        ...c,
+        labels: c.labels ?? [],
+        closedTopics: c.closedTopics ?? [],
+        autoGreetedAt: c.autoGreetedAt ?? 0,
+      });
     }
     if (r.conversations.length < PAGE_SIZE) break;
   }

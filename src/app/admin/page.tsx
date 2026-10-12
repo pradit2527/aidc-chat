@@ -8,7 +8,7 @@ import { getSession } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "IT Helpdesk · Reply Console",
+  title: "IT Helpdesk · Ticket Support",
   robots: { index: false, follow: false },
 };
 

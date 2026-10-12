@@ -22,6 +22,8 @@ export type ConversationDTO = {
   labels: string[];
   /** หัวข้อ (label) ที่ไอทีกดปิดไปแล้ว แต่บทสนทนายังเปิดอยู่เพราะยังมีหัวข้ออื่นค้าง */
   closedTopics: string[];
+  /** เวลาที่ส่งคำทักทายอัตโนมัติล่าสุด (วินาที, 0 = ยังไม่เคย) จาก custom attribute `auto_greeted_at` */
+  autoGreetedAt: number;
   assignee: { id: number; name: string } | null;
 };
 
