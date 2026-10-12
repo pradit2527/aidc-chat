@@ -13,6 +13,18 @@ export async function GET() {
   } catch {
     // reachable = false
   }
-  const configured = { websiteToken: Boolean(websiteToken), hmacToken: Boolean(hmacToken) };
-  return NextResponse.json({ ok: chatwoot.reachable && configured.websiteToken, baseUrl, chatwoot, configured });
+  const configured = {
+    websiteToken: Boolean(websiteToken),
+    hmacToken: Boolean(hmacToken),
+    // แอดมินต้องมี SESSION_SECRET ยาว ≥ 16 ตัว (รายงานแค่ว่ามี/ไม่มี ไม่คืนค่า)
+    sessionSecret: Boolean(process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 16),
+  };
+  return NextResponse.json({
+    ok: chatwoot.reachable && configured.websiteToken && configured.sessionSecret,
+    baseUrl,
+    chatwoot,
+    configured,
+    // ช่วยไล่ปัญหาตอน deploy: อยู่บน Vercel หรือไม่ และ deployment ไหน
+    host: process.env.VERCEL ? { vercel: true, env: process.env.VERCEL_ENV ?? null, url: process.env.VERCEL_URL ?? null } : { vercel: false },
+  });
 }
