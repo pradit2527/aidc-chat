@@ -38,18 +38,25 @@ async function greetIfNewChat(s: Session, c: ConversationDTO): Promise<void> {
   console.log(`[greeter] greeted conversation #${c.id}`);
 }
 
-/** เรียกจาก route รายการเคส — ทำงานเบื้องหลัง ไม่หน่วงการตอบกลับ */
-export function scheduleGreetings(s: Session, convs: ConversationDTO[]): void {
+/**
+ * เรียกจาก route รายการเคสผ่าน `after()` ของ Next — ทำงานหลังส่งคำตอบแล้ว ไม่หน่วงหน้าจอ
+ * คืน Promise ที่รอทุกเคสเสร็จ เพื่อให้แพลตฟอร์ม serverless (เช่น Vercel) ไม่ตัดงานกลางคัน
+ */
+export async function runGreetings(s: Session, convs: ConversationDTO[]): Promise<void> {
   if (!AUTO_GREETING_ENABLED) return;
+  const tasks: Promise<void>[] = [];
   for (const c of convs) {
     if (c.status !== "open" || !c.previewFromContact) continue;
     if (checked.get(c.id) === c.updatedAt || inFlight.has(c.id)) continue;
     inFlight.add(c.id);
-    void greetIfNewChat(s, c)
-      .catch((e: unknown) => console.error(`[greeter] #${c.id}: ${e instanceof Error ? e.message : String(e)}`))
-      .finally(() => {
-        checked.set(c.id, c.updatedAt);
-        inFlight.delete(c.id);
-      });
+    tasks.push(
+      greetIfNewChat(s, c)
+        .catch((e: unknown) => console.error(`[greeter] #${c.id}: ${e instanceof Error ? e.message : String(e)}`))
+        .finally(() => {
+          checked.set(c.id, c.updatedAt);
+          inFlight.delete(c.id);
+        }),
+    );
   }
+  await Promise.allSettled(tasks);
 }

@@ -47,6 +47,28 @@ npm run check:chatwoot         # ตรวจการเชื่อมต่�
 - ล็อกของเซิร์ฟเวอร์เก็บเฉพาะบรรทัดคำขอ (path/สถานะ) และข้อความ error ไม่มีเนื้อหาแชทและไม่มี token
 - ไม่มี analytics หรือบริการภายนอกอื่นนอกจาก Chatwoot (ฟอนต์ถูกโหลดมาเก็บกับตัวแอปตอน build)
 
+## Deploy บน Vercel
+
+โค้ดขึ้น Vercel ได้ทันทีจาก GitHub แต่ **ค่าลับใน `.env.local` ไม่ได้อยู่ใน git** จึงต้องตั้งเองที่ Vercel ไม่เช่นนั้น
+หน้าแชท (ต้องมี `CHATWOOT_WEBSITE_TOKEN`) และหน้าแอดมิน (ต้องมี `SESSION_SECRET`) จะขึ้นข้อความว่ายังไม่ได้ตั้งค่า
+
+1. รัน `node scripts/make-env-vercel.mjs` (หรือใช้ไฟล์ `.env.vercel` ที่สร้างไว้แล้ว — git ignore) ได้ค่าทั้งหมดพร้อมวาง
+2. Vercel → Project → **Settings → Environment Variables** → วางทั้งไฟล์ลงช่อง (รองรับหลายบรรทัด) → เลือก Production (+ Preview) → Save
+3. **Deployments → Redeploy** (ค่าตัวแปรมีผลกับ deployment ใหม่เท่านั้น)
+
+| ตัวแปร | ค่า |
+|---|---|
+| `CHATWOOT_BASE_URL` | `https://chatwoot.aidclaos.com` |
+| `CHATWOOT_WEBSITE_TOKEN` | token ของ inbox COSI Hotel Support (ค่าสาธารณะ) |
+| `CHATWOOT_HMAC_TOKEN` | HMAC ของ inbox (ลับ) |
+| `SESSION_SECRET` | สุ่มใหม่สำหรับ production (ลับ) — `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `CHATWOOT_ACCOUNT_ID` / `CHATWOOT_INBOX_ID` | `1` / `5` |
+| `PORTAL_PUBLIC_URL` | `https://aidc-chat.vercel.app` (ใช้สร้าง QR) |
+
+หมายเหตุสำหรับ serverless: งานเบื้องหลัง (ทักทายอัตโนมัติ) ใช้ `after()` ของ Next จึงทำงานบน Vercel ได้; แคชในหน่วยความจำ
+(จำนวนงานต่อป้าย, เลขตั๋ว, ตัวนับจำกัดล็อกอิน) เป็นรายอินสแตนซ์ ใช้งานได้แต่ไม่แชร์กัน; ถ้า Chatwoot ตอบช้า route `labels`
+อาจใกล้เพดาน 10 วินาทีของแผนฟรี  เมื่อใช้โดเมนจริงแล้ว แนะนำใส่โดเมนใน Chatwoot → inbox → Allowed Domains
+
 ## ให้เครื่องอื่นทดสอบระบบจากเครื่องนี้
 
 ```bash
