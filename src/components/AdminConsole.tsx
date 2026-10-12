@@ -556,7 +556,7 @@ export default function AdminConsole({ user, onSignedOut, demo = false }: Props)
               <Icon name={sound ? "bell" : "bellOff"} className="h-4 w-4" />
             </button>
             <a
-              href="/qr"
+              href="/"
               target="_blank"
               rel="noreferrer"
               title="QR Code"

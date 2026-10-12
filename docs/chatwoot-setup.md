@@ -79,7 +79,7 @@ Chatwoot: `https://chatwoot.aidclaos.com` (account 1 — AIDC-TECH)
 ## 2. ตั้งค่า inbox "COSI Hotel Support"
 
 - **Website name**: COSI Hotel IT Support
-- **Website domain**: โดเมนที่โฮสต์พอร์ทัล (เช่น `cosi-support.aidclaos.com`) ตอนทดสอบใช้ `localhost`
+- **Website domain**: โดเมนที่โฮสต์พอร์ทัล (เช่น `cosi-support.aidclaos.com`) ตอนทดสอบใช้ `localhost`; หน้าพนักงานอยู่ที่ path `/chat` (หน้าแรก `/` เป็น QR)
 - **Widget color**: `#0284c7`
 - **Welcome heading / tagline** (ภาษาลาว): ตั้งที่ Configuration → Widget Builder
 - **Pre-chat form**: ปิดไว้ (พอร์ทัลรู้ตัวตนผู้ใช้ผ่าน `setUser` อยู่แล้ว)

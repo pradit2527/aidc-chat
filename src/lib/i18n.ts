@@ -75,7 +75,7 @@ const M = {
 
 
 
-  // ---- หน้า QR Code (/qr) ----
+  // ---- หน้าแรก: โปสเตอร์ QR (/) ----
   qrTitle: { lo: "QR Code ສຳລັບພະນັກງານ", en: "Staff QR code" },
   qrHint: {
     lo: "ພິມແລ້ວຕິດໃນຈຸດທີ່ພະນັກງານເຫັນງ່າຍ ສະແກນແລ້ວເຂົ້າໜ້າແຈ້ງບັນຫາໄດ້ທັນທີ",
@@ -96,6 +96,8 @@ const M = {
   qrCopy: { lo: "ສຳເນົາລິ້ງ", en: "Copy link" },
   qrCopied: { lo: "ສຳເນົາແລ້ວ", en: "Copied" },
   qrInvalid: { lo: "ລິ້ງບໍ່ຖືກຕ້ອງ (ຕ້ອງຂຶ້ນຕົ້ນດ້ວຍ http:// ຫຼື https://)", en: "Invalid link (must start with http:// or https://)" },
+  qrGoStaff: { lo: "ເປີດໜ້າແຈ້ງບັນຫາ (ບໍ່ຕ້ອງສະແກນ)", en: "Open the report page (no scan needed)" },
+  qrGoAdmin: { lo: "ສຳລັບທີມໄອທີ", en: "IT team" },
 
   // ---- คอนโซลทีมไอที (/admin) ----
   admTitle: { lo: "Ticket Support", en: "Ticket Support" },

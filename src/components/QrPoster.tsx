@@ -19,12 +19,14 @@ export default function QrPoster({ initialLang, publicUrl, showTools = false }: 
   );
 }
 
-/** QR ต้องพาไปหน้าพนักงาน (ราก "/") เท่านั้น — ตัด path/query ทิ้งเพื่อไม่ให้หลุดไปหน้า /admin */
+/** path ของหน้าพนักงาน — QR ต้องพาไปหน้านี้เท่านั้น (ตัด path/query อื่นทิ้ง ไม่ให้หลุดไป /admin) */
+export const STAFF_PATH = "/chat";
+
 function staffUrl(input: string): string | null {
   try {
     const u = new URL(input.trim());
     if (u.protocol !== "http:" && u.protocol !== "https:") return null;
-    return `${u.origin}/`;
+    return `${u.origin}${STAFF_PATH}`;
   } catch {
     return null;
   }
@@ -245,6 +247,19 @@ function Poster({ publicUrl, showTools }: { publicUrl: string; showTools: boolea
           </div>
         </section>
       </main>
+
+      {/* ทางไปหน้าอื่นโดยไม่ต้องสแกน (ไม่พิมพ์ออกกระดาษ) */}
+      <nav className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-3 px-4 pb-8 text-sm print:hidden">
+        <a
+          href={STAFF_PATH}
+          className="inline-flex h-10 items-center rounded-lg bg-brand-600 px-4 font-semibold text-white transition hover:bg-brand-700"
+        >
+          {t("qrGoStaff")}
+        </a>
+        <a href="/admin" className="inline-flex h-10 items-center px-3 text-stone-500 hover:text-deep-700 hover:underline">
+          {t("qrGoAdmin")}
+        </a>
+      </nav>
     </div>
   );
 }
