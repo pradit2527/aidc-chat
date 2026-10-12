@@ -1,0 +1,203 @@
+// ข้อความหน้าจอ 2 ภาษา — ภาษาลาวเป็นค่าเริ่มต้น (พนักงานโค่ซี่ใช้ลาว/อังกฤษ)
+export type Lang = "lo" | "en";
+
+export const DEFAULT_LANG: Lang = "lo";
+export const LANG_COOKIE = "lang";
+export const LANGS: { id: Lang; label: string }[] = [
+  { id: "lo", label: "ລາວ" },
+  { id: "en", label: "EN" },
+];
+
+export const isLang = (v: unknown): v is Lang => v === "lo" || v === "en";
+
+const M = {
+  brand: { lo: "COSI Hotel", en: "COSI Hotel" },
+  heroTitle: { lo: "ລະບົບການແຈ້ງບັນຫາ", en: "Problem Reporting System" },
+  heroSub: {
+    lo: "ມີບັນຫາຄອມພິວເຕີ, ອິນເຕີເນັດ ຫຼື ລະບົບໂຮງແຮມ? ແຊັດຫາທີມໄອທີໄດ້ທັນທີ",
+    en: "Trouble with a computer, the internet or a hotel system? Chat with the IT team right away.",
+  },
+
+  heroStep1: { lo: "ກອກຂໍ້ມູນຂອງເຈົ້າ", en: "Your details" },
+  heroStep2: { lo: "ເລືອກຫົວຂໍ້ບັນຫາ", en: "Pick a topic" },
+  heroStep3: { lo: "ແຊັດກັບທີມໄອທີ", en: "Chat with IT" },
+
+
+  step1Title: { lo: "1. ກະລຸນາກອກຂໍ້ມູນ", en: "1. Please fill in your details" },
+  step1Hint: {
+    lo: "ໃສ່ຂໍ້ມູນຄັ້ງດຽວ ເພື່ອໃຫ້ທີມໄອທີຮູ້ວ່າຕ້ອງໄປຊ່ວຍໃຜ ແລະ ທີ່ໃດ",
+    en: "Enter this once so IT knows who to help and where.",
+  },
+  fieldName: { lo: "ຊື່ ແລະ ນາມສະກຸນ", en: "Full name" },
+  fieldDept: { lo: "ພະແນກ", en: "Department" },
+  fieldContact: { lo: "ເບີຕໍ່ພາຍໃນ / ເບີໂທ (ບໍ່ບັງຄັບ)", en: "Extension / phone (optional)" },
+  deptPlaceholder: { lo: "ເລືອກພະແນກ", en: "Choose department" },
+  saveProfile: { lo: "ບັນທຶກ", en: "Save" },
+  saving: { lo: "ກຳລັງບັນທຶກ...", en: "Saving…" },
+  cancel: { lo: "ຍົກເລີກ", en: "Cancel" },
+  errNameRequired: { lo: "ກະລຸນາໃສ່ຊື່", en: "Please enter your name" },
+  errDeptRequired: { lo: "ກະລຸນາເລືອກພະແນກ", en: "Please choose a department" },
+  errSaveFailed: { lo: "ບັນທຶກບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່", en: "Could not save. Please try again." },
+  hello: { lo: "ສະບາຍດີ, {name}", en: "Hello, {name}" },
+  switchUser: { lo: "ປ່ຽນຜູ້ໃຊ້", en: "Switch user" },
+
+  step2Title: { lo: "2. ເລືອກຫົວຂໍ້ບັນຫາ", en: "2. Choose a problem topic" },
+  step2Hint: { lo: "ເລືອກຫົວຂໍ້ທີ່ໃກ້ຄຽງທີ່ສຸດ", en: "Pick the closest topic." },
+  urgentLabel: { lo: "ດ່ວນ — ກະທົບການບໍລິການແຂກ", en: "Urgent — guest service is affected" },
+  urgentHint: {
+    lo: "ໃຊ້ສະເພາະເມື່ອແຂກໄດ້ຮັບຜົນກະທົບ ຫຼື ເຮັດວຽກຕໍ່ບໍ່ໄດ້",
+    en: "Only when guests are affected or work is completely blocked.",
+  },
+
+  startChat: { lo: "ເລີ່ມແຊັດກັບທີມໄອທີ", en: "Chat with IT" },
+  pickTopicFirst: { lo: "ເລືອກຫົວຂໍ້ບັນຫາກ່ອນ", en: "Pick a topic first" },
+  connecting: { lo: "ກຳລັງເຊື່ອມຕໍ່ແຊັດ...", en: "Connecting chat…" },
+  chatError: {
+    lo: "ເຊື່ອມຕໍ່ລະບົບແຊັດບໍ່ໄດ້ ກະລຸນາລອງໃໝ່ ຫຼື ແຈ້ງໄອທີໂດຍກົງ",
+    en: "Cannot reach the chat system. Please retry, or contact IT directly.",
+  },
+  notConfigured: {
+    lo: "ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ CHATWOOT_WEBSITE_TOKEN — ແຈ້ງຜູ້ດູແລລະບົບ",
+    en: "CHATWOOT_WEBSITE_TOKEN is not set — tell the system administrator.",
+  },
+  chatHint: {
+    lo: "ໜ້າຕ່າງແຊັດຈະເປີດຢູ່ມຸມຂວາລຸ່ມ ເຈົ້າສາມາດແນບຮູບໜ້າຈໍໄດ້",
+    en: "The chat window opens at the bottom right. You can attach a screenshot.",
+  },
+
+
+
+
+
+
+
+
+
+
+
+  // ---- หน้า QR Code (/qr) ----
+  qrTitle: { lo: "QR Code ສຳລັບພະນັກງານ", en: "Staff QR code" },
+  qrHint: {
+    lo: "ພິມແລ້ວຕິດໃນຈຸດທີ່ພະນັກງານເຫັນງ່າຍ ສະແກນແລ້ວເຂົ້າໜ້າແຈ້ງບັນຫາໄດ້ທັນທີ",
+    en: "Print it and post it where staff can see it. Scanning opens the problem-report page.",
+  },
+  qrUrlLabel: { lo: "ລິ້ງທີ່ໃສ່ໃນ QR", en: "Link encoded in the QR" },
+  qrOnlyStaff: {
+    lo: "QR ນີ້ພາໄປໜ້າພະນັກງານເທົ່ານັ້ນ (ບໍ່ແມ່ນໜ້າຂອງທີມໄອທີ)",
+    en: "This QR opens the staff page only — never the IT console.",
+  },
+  qrLocalWarn: {
+    lo: "ລິ້ງນີ້ເປັນ localhost — ມືຖືສະແກນແລ້ວເຂົ້າບໍ່ໄດ້ ໃຫ້ໃຊ້ IP ຂອງເຄື່ອງ ຫຼື ໂດເມນຈິງ",
+    en: "This is a localhost link — phones cannot open it. Use the machine's IP or the real domain.",
+  },
+  qrPrint: { lo: "ພິມ", en: "Print" },
+  qrPng: { lo: "ດາວໂຫຼດ PNG", en: "Download PNG" },
+  qrSvg: { lo: "ດາວໂຫຼດ SVG", en: "Download SVG" },
+  qrCopy: { lo: "ສຳເນົາລິ້ງ", en: "Copy link" },
+  qrCopied: { lo: "ສຳເນົາແລ້ວ", en: "Copied" },
+  qrInvalid: { lo: "ລິ້ງບໍ່ຖືກຕ້ອງ (ຕ້ອງຂຶ້ນຕົ້ນດ້ວຍ http:// ຫຼື https://)", en: "Invalid link (must start with http:// or https://)" },
+
+  // ---- คอนโซลทีมไอที (/admin) ----
+  admTitle: { lo: "ລະບົບຕອບແຊັດໄອທີ", en: "IT Reply Console" },
+  admBrand: { lo: "IT Helpdesk", en: "IT Helpdesk" },
+  admLoginTitle: { lo: "ເຂົ້າສູ່ລະບົບທີມໄອທີ", en: "IT team sign in" },
+  admLoginHint: {
+    lo: "ໃຊ້ອີເມວ ແລະ ລະຫັດຜ່ານ Chatwoot ຂອງເຈົ້າ",
+    en: "Use your Chatwoot email and password.",
+  },
+  admEmail: { lo: "ອີເມວ", en: "Email" },
+  admPassword: { lo: "ລະຫັດຜ່ານ", en: "Password" },
+  admSignIn: { lo: "ເຂົ້າສູ່ລະບົບ", en: "Sign in" },
+  admSigningIn: { lo: "ກຳລັງເຂົ້າສູ່ລະບົບ...", en: "Signing in…" },
+  admLoginFailed: { lo: "ອີເມວ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ", en: "Wrong email or password." },
+  admLoginForbidden: { lo: "ບັນຊີນີ້ບໍ່ມີສິດໃຊ້ລະບົບນີ້", en: "This account is not allowed here." },
+  admLoginBusy: { lo: "ລອງຫຼາຍເກີນໄປ ກະລຸນາລໍຖ້າສອງສາມນາທີ", en: "Too many attempts. Please wait a few minutes." },
+  admLoginDown: { lo: "ເຊື່ອມຕໍ່ Chatwoot ບໍ່ໄດ້", en: "Cannot reach Chatwoot." },
+  admNotConfigured: {
+    lo: "ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ SESSION_SECRET — ແຈ້ງຜູ້ດູແລລະບົບ",
+    en: "SESSION_SECRET is not set — tell the system administrator.",
+  },
+  admDemoBanner: {
+    lo: "ໂໝດຕົວຢ່າງ — ຂໍ້ມູນທັງໝົດເປັນຂອງປອມ ບໍ່ແມ່ນແຊັດຈິງ. ເຂົ້າແບບຈິງທີ່",
+    en: "Demo mode — all data is fake, not your real chats. Open the real console at",
+  },
+  admSignOut: { lo: "ອອກຈາກລະບົບ", en: "Sign out" },
+  admBackToPortal: { lo: "ໜ້າພະນັກງານ", en: "Staff page" },
+  admTabOpen: { lo: "ກຳລັງດຳເນີນ", en: "Open" },
+  admTabResolved: { lo: "ແກ້ໄຂແລ້ວ", en: "Resolved" },
+  admTabAll: { lo: "ທັງໝົດ", en: "All" },
+  admChannel: { lo: "ຊ່ອງແຊັດ", en: "Channel" },
+  admScopeMine: { lo: "ຂອງຂ້ອຍ", en: "Mine" },
+  admLabels: { lo: "ປ້າຍກຳກັບ", en: "Labels" },
+  admAllLabels: { lo: "ທຸກປ້າຍ", en: "All labels" },
+  admLabelCountHint: {
+    lo: "ເລກສີແດງ = ຂໍ້ຄວາມຍັງບໍ່ໄດ້ອ່ານ · ເລກສີຂີ້ເຖົ່າ = ງານເປີດຢູ່ / ທັງໝົດ",
+    en: "Red = unread messages · Grey = open / total tasks",
+  },
+  admUrgent: { lo: "ດ່ວນ", en: "Urgent" },
+  admSearch: { lo: "ຄົ້ນຫາຊື່ ຫຼື ຂໍ້ຄວາມ", en: "Search name or message" },
+  admEmptyList: { lo: "ຍັງບໍ່ມີລາຍການແຈ້ງບັນຫາ", en: "No reports here yet" },
+  admEmptyOpen: {
+    lo: "ບໍ່ມີເຄສທີ່ເປີດຢູ່ — ທຸກເຄສຖືກປິດແລ້ວ ປະຫວັດແຊັດຍັງຢູ່ຄົບໃນແທັບ “ແກ້ໄຂແລ້ວ”",
+    en: "No open cases — every case has been closed. Chat history is kept under “Resolved”.",
+  },
+  admViewResolved: { lo: "ເບິ່ງເຄສທີ່ແກ້ໄຂແລ້ວ ({n})", en: "View resolved cases ({n})" },
+  admPickConv: { lo: "ເລືອກລາຍການທາງຊ້າຍເພື່ອເລີ່ມຕອບ", en: "Pick a report on the left to start replying" },
+  admReplyPlaceholder: { lo: "ພິມຂໍ້ຄວາມຕອບກັບ... (Enter ເພື່ອສົ່ງ)", en: "Type a reply… (Enter to send)" },
+  admNotePlaceholder: {
+    lo: "ບັນທຶກພາຍໃນ ສະເພາະທີມງານທີ່ເຫັນ...",
+    en: "Private note — only your team can see it…",
+  },
+  admSend: { lo: "ສົ່ງ", en: "Send" },
+  admPrivateNote: { lo: "ບັນທຶກພາຍໃນ", en: "Private note" },
+  admResolve: { lo: "ປິດເຄສ", en: "Resolve" },
+  admCloseTitle: { lo: "ປິດເຄສ", en: "Close case" },
+  admCloseHint: {
+    lo: "ເລືອກຫົວຂໍ້ທີ່ແກ້ໄຂແລ້ວ ຂອງ {name}",
+    en: "Tick the topics that are resolved for {name}",
+  },
+  admOpenTopics: { lo: "ຫົວຂໍ້ທີ່ຍັງບໍ່ໄດ້ປິດ", en: "Topics still open" },
+  admSelectAll: { lo: "ເລືອກທັງໝົດ", en: "Select all" },
+  admCloseAll: { lo: "ປິດເຄສທັງໝົດ", en: "Close the whole case" },
+  admCloseSelected: { lo: "ປິດຫົວຂໍ້ທີ່ເລືອກ ({n})", en: "Close selected ({n})" },
+  admCloseNoTopics: {
+    lo: "ເຄສນີ້ບໍ່ມີຫົວຂໍ້ ປິດເຄສທັງໝົດໄດ້ເລີຍ",
+    en: "This case has no topics — you can close it right away.",
+  },
+  admCloseStaysOpen: {
+    lo: "ເຄສຍັງເປີດຢູ່ ເພາະຍັງມີຫົວຂໍ້ທີ່ບໍ່ໄດ້ເລືອກ",
+    en: "The case stays open because some topics are not selected.",
+  },
+  admClosedTopics: { lo: "ປິດແລ້ວ", en: "Closed" },
+  admClosing: { lo: "ກຳລັງປິດ...", en: "Closing…" },
+  admCloseErr: { lo: "ປິດບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່", en: "Could not close. Please try again." },
+  admTopicNote: {
+    lo: "ປິດຫົວຂໍ້: {topics} (ໂດຍ {name})",
+    en: "Closed topics: {topics} (by {name})",
+  },
+  admReopen: { lo: "ເປີດໃໝ່", en: "Reopen" },
+  admAssignMe: { lo: "ຮັບເລື່ອງນີ້", en: "Take this" },
+  admAssignee: { lo: "ຜູ້ຮັບຜິດຊອບ", en: "Assignee" },
+  admUnassigned: { lo: "ຍັງບໍ່ມີຜູ້ຮັບ", en: "Unassigned" },
+  admQuick: { lo: "ຄຳຕອບດ່ວນ", en: "Quick replies" },
+  admNoQuick: { lo: "ຍັງບໍ່ມີຄຳຕອບດ່ວນ — ສ້າງໄດ້ໃນ Chatwoot", en: "No quick replies yet — create them in Chatwoot" },
+  admBack: { lo: "ກັບຄືນ", en: "Back" },
+  admLoadErr: { lo: "ເຊື່ອມຕໍ່ Chatwoot ບໍ່ໄດ້ ກຳລັງລອງໃໝ່...", en: "Cannot reach Chatwoot — retrying…" },
+  admSendErr: { lo: "ສົ່ງບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່", en: "Could not send. Please try again." },
+  admLoadEarlier: { lo: "ໂຫຼດຂໍ້ຄວາມກ່ອນໜ້າ", en: "Load earlier messages" },
+  admSoundOn: { lo: "ເປີດສຽງແຈ້ງເຕືອນ", en: "Sound on" },
+  admSoundOff: { lo: "ປິດສຽງແຈ້ງເຕືອນ", en: "Sound off" },
+  admStatusOpen: { lo: "ເປີດຢູ່", en: "Open" },
+  admStatusResolved: { lo: "ແກ້ໄຂແລ້ວ", en: "Resolved" },
+  admStatusPending: { lo: "ລໍຖ້າ", en: "Pending" },
+  admStatusSnoozed: { lo: "ພັກໄວ້", en: "Snoozed" },
+  admYou: { lo: "ເຈົ້າ", en: "You" },
+} satisfies Record<string, Record<Lang, string>>;
+
+export type MsgKey = keyof typeof M;
+
+export function translate(lang: Lang, key: MsgKey, vars?: Record<string, string | number>) {
+  let s: string = M[key][lang];
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
+  return s;
+}

@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-lao), ui-sans-serif, system-ui, sans-serif;
+
+  /* สีแบรนด์ COSI ดึงจากตัวอาคาร: ส้มแดงด้านหน้า + กระจกเขียวอมน้ำเงินเข้ม + ตัวอักษรขาว */
+  --color-brand-50: #fff4ef;
+  --color-brand-100: #ffe3d6;
+  --color-brand-200: #ffc5ac;
+  --color-brand-300: #ff9f78;
+  --color-brand-400: #f5703f;
+  --color-brand-500: #e8431e; /* ส้มแดงบนตึก — ใช้กับป้ายโลโก้/เส้นเน้น */
+  --color-brand-600: #d93a15; /* พื้นปุ่มที่มีตัวอักษรขาว (contrast ≈ 4.6:1) */
+  --color-brand-700: #b52e10;
+
+  --color-deep-50: #edf5f5;
+  --color-deep-100: #d3e6e6;
+  --color-deep-600: #17484b;
+  --color-deep-700: #123a3d;
+  --color-deep-800: #0f2e30; /* เขียวอมน้ำเงินเข้มของกระจกอาคาร */
+  --color-deep-900: #0a2224;
+
+  --color-canvas: #faf8f5;
+  --color-ink: #1c1917;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ส่วนหัว: กระจกเข้มของอาคาร + แสงส้มแดงจากด้านขวา + เส้นส้มด้านล่าง */
+.hero {
+  background:
+    radial-gradient(900px 260px at 92% -40%, rgb(232 67 30 / 0.5), transparent 62%),
+    linear-gradient(110deg, #0a2224, #0f2e30 50%, #17484b);
+  border-bottom: 3px solid #e8431e;
+}
+
+/*
+ * เอฟเฟกต์แสงด้านหลังส่วนหัว (ใช้คู่กับ .hero — เฉพาะหน้าพนักงาน)
+ *  - fx-orb   : แสงสีส้ม/ฟ้าเบลอ ลอยช้าๆ
+ *  - fx-sweep : แสงสะท้อนเฉียงกวาดผ่านทั้งแถบเป็นจังหวะ
+ *  - fx-edge  : ไฟวิ่งตามเส้นสีส้มด้านล่าง
+ * เป็น transform/opacity ล้วน จึงลื่นและเบา; เนื้อหาจริงต้องมี `relative z-10` เพื่อลอยเหนือเลเยอร์นี้
+ */
+.hero-fx {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-bottom: 0; /* เส้นล่างวาดด้วย .fx-edge แทน */
+}
+.fx-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.fx-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(46px);
+  will-change: transform;
+}
+.fx-orb-a {
+  width: 22rem;
+  height: 22rem;
+  left: -7rem;
+  top: -10rem;
+  background: radial-gradient(circle, rgb(232 67 30 / 0.55), transparent 66%);
+  animation: fx-drift-a 17s ease-in-out infinite alternate;
+}
+.fx-orb-b {
+  width: 28rem;
+  height: 28rem;
+  right: 8%;
+  bottom: -16rem;
+  background: radial-gradient(circle, rgb(56 189 248 / 0.34), transparent 66%);
+  animation: fx-drift-b 21s ease-in-out infinite alternate;
+}
+.fx-sweep {
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: 0;
+  width: 26%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.08) 30%,
+    rgb(255 255 255 / 0.2) 50%,
+    rgb(255 255 255 / 0.08) 70%,
+    transparent
+  );
+  filter: blur(5px);
+  transform: translateX(-130%) skewX(-20deg);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: fx-sweep 10s ease-in-out infinite;
+}
+.fx-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  overflow: hidden;
+  background: #e8431e;
+}
+.fx-edge::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 22%;
+  background: linear-gradient(90deg, transparent, #ffc9ad 35%, #ffffff 50%, #ffc9ad 65%, transparent);
+  animation: fx-edge 5s linear infinite;
+}
+@keyframes fx-sweep {
+  0% { transform: translateX(-130%) skewX(-20deg); opacity: 0; }
+  6% { opacity: 1; }
+  44% { transform: translateX(440%) skewX(-20deg); opacity: 1; }
+  50%, 100% { transform: translateX(440%) skewX(-20deg); opacity: 0; }
+}
+@keyframes fx-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(48vw, 2.5rem, 0) scale(1.25); }
+}
+@keyframes fx-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-38vw, -3rem, 0) scale(0.9); }
+}
+@keyframes fx-edge {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(470%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-orb,
+  .fx-sweep,
+  .fx-edge::after {
+    animation: none;
+  }
+  .fx-sweep {
+    opacity: 0;
+  }
+}
+
+.card {
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow:
+    0 0 0 1px rgb(231 229 228 / 0.9),
+    0 1px 2px rgb(28 25 23 / 0.04),
+    0 10px 28px -14px rgb(28 25 23 / 0.18);
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+/* โปสเตอร์ QR: ให้พิมพ์สีพื้นหลังออกมาด้วย (เบราว์เซอร์ปกติจะตัดทิ้ง) */
+.poster {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  body {
+    background: #fff;
+  }
+}
+
+/* ตัวเลขแจ้งเตือนสีแดงของคอนโซลไอที: เด้งตอนตัวเลขเปลี่ยน แล้วสั่นดึ๋งๆ เป็นช่วงๆ ให้สะดุดตา */
+@keyframes badge-pop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+@keyframes badge-wiggle {
+  0%, 52%, 100% { transform: rotate(0) scale(1); }
+  58% { transform: rotate(-16deg) scale(1.15); }
+  65% { transform: rotate(14deg) scale(1.15); }
+  72% { transform: rotate(-10deg) scale(1.08); }
+  79% { transform: rotate(7deg) scale(1.05); }
+  86% { transform: rotate(-3deg) scale(1); }
+}
+.unread-badge {
+  animation:
+    badge-pop 0.45s ease-out,
+    badge-wiggle 2.4s ease-in-out 0.6s infinite;
+}
+/* แถวป้ายกำกับกะพริบพื้นแดงอ่อนครั้งเดียวเมื่อมีข้อความใหม่เข้า */
+@keyframes row-flash {
+  0% { background-color: rgb(254 202 202 / 0.95); }
+  100% { background-color: transparent; }
+}
+.row-flash {
+  animation: row-flash 1.6s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .unread-badge,
+  .row-flash {
+    animation: none;
+  }
+}
