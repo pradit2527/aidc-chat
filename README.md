@@ -88,6 +88,20 @@ Function Region = Singapore (sin1)** ให้ฟังก์ชันอยู�
 (จำนวนงานต่อป้าย, เลขตั๋ว, ตัวนับจำกัดล็อกอิน) เป็นรายอินสแตนซ์ ใช้งานได้แต่ไม่แชร์กัน; ถ้า Chatwoot ตอบช้า route `labels`
 อาจใกล้เพดาน 10 วินาทีของแผนฟรี  เมื่อใช้โดเมนจริงแล้ว แนะนำใส่โดเมนใน Chatwoot → inbox → Allowed Domains
 
+## Deploy บนเซิร์ฟเวอร์ภายใน (Docker)
+
+ใช้งานจริงในออฟฟิศที่ `http://10.0.100.54:3400` (เซิร์ฟเวอร์ Ubuntu, ผู้ใช้ `itsupport`, โฟลเดอร์ `~/apps/aidc-chat`) เพราะเครือข่ายออฟฟิศ
+บล็อกโดเมน `*.vercel.app` ตามชื่อโดเมน (TLS ไปถึงแต่ถูกตัด, `vercel.com` เปิดได้) บางเครื่องจึงเข้า Vercel ไม่ได้
+พอร์ต 3400 ไม่ชนกับโปรเจกต์อื่นบนเครื่องนั้น (web-portal 3009, trion-lidar 8080)
+
+1. ครั้งแรก: ใส่กุญแจ SSH ของเครื่องพัฒนาไว้บนเซิร์ฟเวอร์ และสร้าง `~/apps/aidc-chat/.env.production` (คีย์เดียวกับ `.env.example`
+   แต่ `PORTAL_PUBLIC_URL=http://10.0.100.54:3400` และ `SESSION_SECRET` สุ่มใหม่) — ไฟล์นี้อยู่บนเซิร์ฟเวอร์เท่านั้น
+2. ทุกครั้งที่จะอัปเดต: commit แล้วรัน `npm run deploy:server` — ส่งโค้ดจาก `git archive HEAD` ผ่าน SSH แล้ว `docker compose up -d --build`
+3. ดูสถานะ/ล็อกบนเซิร์ฟเวอร์: `cd ~/apps/aidc-chat && docker compose ps && docker compose logs --tail 100`
+
+ไฟล์ที่เกี่ยวข้อง: `Dockerfile` (node 22, build แยกจาก run), `docker-compose.yml` (พอร์ต 3400, healthcheck), `scripts/deploy-server.sh`
+ทะเบียน Ticket ใช้ Neon ฐานเดียวกับ Vercel จึงเห็นเลขตั๋ว/สถิติชุดเดียวกันทั้งสองที่
+
 ## ให้เครื่องอื่นทดสอบระบบจากเครื่องนี้
 
 ```bash

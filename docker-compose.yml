@@ -1,0 +1,17 @@
+# เซิร์ฟเวอร์ภายใน: docker compose up -d --build  (โฟลเดอร์ต้องมี .env.production — git ไม่ติดตาม)
+# พอร์ต 3400 บนเครื่อง → 3400 ในคอนเทนเนอร์ (web-portal ใช้ 3009, trion-lidar ใช้ 8080 จึงไม่ชนกัน)
+services:
+  web:
+    build: .
+    image: aidc-chat:latest
+    restart: unless-stopped
+    ports:
+      - "3400:3400"
+    env_file:
+      - .env.production
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3400/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
