@@ -17,6 +17,7 @@
 | `/` | ทุกคน | **หน้าแรก = โปสเตอร์ QR** ชี้ไป `/chat` (+ ลิงก์ไปหน้าพนักงาน/ทีมไอที) · เปิดเครื่องมือพิมพ์/ดาวน์โหลดด้วย `/?tools=1` |
 | `/chat` | พนักงานโรงแรม | แจ้งปัญหา: กรอกชื่อ + แผนก → เลือกหัวข้อ → แชทกับไอที (ฝัง Chatwoot widget); เมื่อไอทีปิดเคส จะมีข้อความแจ้งพร้อมเลข Ticket ในแชท |
 | `/admin` | ทีมไอที | **คอนโซลตอบแชท** ไม่ต้องเข้า Chatwoot: ล็อกอินด้วยบัญชี Chatwoot, ดูรายการแจ้งปัญหา, กรองตามป้ายกำกับ (มีจำนวนงาน + ตัวเลขแดงแจ้งเตือน), ตอบ/บันทึกภายใน/มอบหมาย/ปิดเคส |
+| `/admin/stats` | ทีมไอที | **สถิติ Ticket** จากทะเบียนใน Neon: เปิดอยู่/แจ้งวันนี้/ปิดวันนี้, เวลาปิดเคสและเวลาตอบครั้งแรกเฉลี่ย, รายวัน, ตามป้ายกำกับ, ตามเจ้าหน้าที่, 50 เคสล่าสุด (เลือกช่วง `?days=7|14|30|90`; ต้องล็อกอินคอนโซลก่อน) |
 | `/qr` | — | ลิงก์เดิม เด้งไปหน้าแรก `/` |
 | `/admin?demo=1` | ตอนพัฒนา | โหมดตัวอย่างของคอนโซล (ข้อมูลปลอม ไม่เรียก Chatwoot ปิดอัตโนมัติใน production) |
 
@@ -35,18 +36,28 @@ npm run check:chatwoot         # ตรวจการเชื่อมต่�
 
 ## ข้อมูลถูกเก็บที่ไหน
 
-**ระบบนี้ไม่มีฐานข้อมูลและไม่เขียนไฟล์ข้อมูลเอง** ข้อมูลงานทั้งหมดอยู่ที่ Chatwoot ที่เดียว
+**เนื้อหาแชททั้งหมดอยู่ที่ Chatwoot ที่เดียว** ส่วน Neon Postgres (ถ้าตั้ง `DATABASE_URL`) เก็บเฉพาะ **ทะเบียน Ticket + ประวัติเหตุการณ์ + สถิติ** — ไม่เก็บข้อความแชท
 
 | ที่เก็บ | เก็บอะไร | หมายเหตุ |
 |---|---|---|
 | **Chatwoot** (`chatwoot.aidclaos.com`) | แชท ข้อความ ไฟล์แนบ ผู้ติดต่อ (ชื่อ แผนก เบอร์ต่อ) ป้ายกำกับ ผู้รับผิดชอบ สถานะ และ "หัวข้อที่ปิดแล้ว" (`closed_topics`) | แหล่งข้อมูลจริงเพียงแห่งเดียว (Postgres/ไฟล์แนบอยู่บนเซิร์ฟเวอร์ Chatwoot) |
+| **Neon Postgres** (`neondb`, ภูมิภาค ap-southeast-1 สิงคโปร์, ไม่บังคับ) | ตาราง `tickets` (เลขตั๋วถาวร, ชื่อ/แผนก, ป้ายกำกับ, หัวข้อที่ปิด, ด่วน, สถานะ, ผู้รับผิดชอบ, เวลาสร้าง/ตอบครั้งแรก/ปิด), `ticket_counters` (ตัวนับเลขต่อวัน), `ticket_events` (created, greeted, replied, note, topic_closed, assigned, resolved, reopened) | ลงทะเบียนอัตโนมัติเมื่อคอนโซลโหลดรายการเคส; ถ้าไม่ตั้งค่า ระบบคำนวณเลขตั๋วจาก Chatwoot แทน (ไม่ถาวร) และไม่มีหน้า `/admin/stats` |
 | **เบราว์เซอร์ของพนักงาน** | `localStorage`: ชื่อ/แผนก/เบอร์ต่อ + identifier ที่ใช้ระบุตัว; คุกกี้ `lang` | อยู่เฉพาะเครื่องนั้น ปุ่ม "ปรับผู้ใช้" ล้างให้ |
 | **เบราว์เซอร์ของทีมไอที** | คุกกี้ `cosi_admin` (httpOnly, เข้ารหัส AES-256-GCM, อายุ 12 ชม.) เก็บ token ของ Chatwoot ของผู้ล็อกอิน; `localStorage`: เปิด/ปิดเสียง | ไม่เก็บรหัสผ่าน; ออกจากระบบแล้วคุกกี้ถูกลบ |
-| **ไฟล์ `.env.local` บนเซิร์ฟเวอร์ของเรา** | ความลับของระบบ: website token, HMAC token, `SESSION_SECRET` | อยู่นอก git (`.gitignore`) |
+| **ไฟล์ `.env.local` บนเซิร์ฟเวอร์ของเรา** | ความลับของระบบ: website token, HMAC token, `SESSION_SECRET`, `DATABASE_URL` | อยู่นอก git (`.gitignore`) |
 | **หน่วยความจำของเซิร์ฟเวอร์ (ชั่วคราว)** | ตัวนับจำกัดจำนวนครั้งล็อกอิน/เรียก, แคชจำนวนงานต่อป้าย 6 วินาที | หายเมื่อรีสตาร์ท ไม่มีข้อมูลงาน |
 
 - ล็อกของเซิร์ฟเวอร์เก็บเฉพาะบรรทัดคำขอ (path/สถานะ) และข้อความ error ไม่มีเนื้อหาแชทและไม่มี token
-- ไม่มี analytics หรือบริการภายนอกอื่นนอกจาก Chatwoot (ฟอนต์ถูกโหลดมาเก็บกับตัวแอปตอน build)
+- ไม่มี analytics หรือบริการภายนอกอื่นนอกจาก Chatwoot และ Neon (ฟอนต์ถูกโหลดมาเก็บกับตัวแอปตอน build)
+
+### ตั้งค่า Neon (ทะเบียน Ticket + สถิติ)
+
+1. Neon → Project → Branch → **Connect** → เลือก **Pooled connection** → คัดลอก connection string
+2. ใส่ใน `.env.local` เป็น `DATABASE_URL=postgresql://...` (ไฟล์นี้อยู่นอก git)
+3. สร้างตาราง: `npm run db:migrate` (รันซ้ำได้ ไม่ลบข้อมูล — ใช้ `db/schema.sql`)
+4. เปิดคอนโซล `/admin` หนึ่งครั้ง เคสที่เห็นจะถูกลงทะเบียนและได้เลขตั๋วถาวรทันที แล้วดูที่ปุ่ม **ສະຖິຕິ** หรือ `/admin/stats`
+
+เลขตั๋ว `Ticket<วว-ดด-ปปปป>-<ลำดับ>` ออกตามลำดับเวลาสร้างเคสในวันนั้น (เวลาลาว UTC+7) ด้วย advisory lock ต่อวัน จึงไม่ซ้ำแม้คอนโซลหลายเครื่องโหลดพร้อมกัน
 
 ## Deploy บน Vercel
 
@@ -65,6 +76,13 @@ npm run check:chatwoot         # ตรวจการเชื่อมต่�
 | `SESSION_SECRET` | สุ่มใหม่สำหรับ production (ลับ) — `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `CHATWOOT_ACCOUNT_ID` / `CHATWOOT_INBOX_ID` | `1` / `5` |
 | `PORTAL_PUBLIC_URL` | `https://aidc-chat.vercel.app` (ใช้สร้าง QR) |
+| `DATABASE_URL` | connection string แบบ pooled ของ Neon (ลับ) — ไม่ใส่ก็ได้ แต่จะไม่มีทะเบียน Ticket/สถิติ |
+
+**ต่อ Vercel กับ Neon (ทำแล้ว):** ใช้ Vercel → Project → **Storage → Connect Database → Neon** (integration) — Vercel ใส่ตัวแปร
+`DATABASE_URL`, `POSTGRES_URL`, `PGHOST` ฯลฯ ให้เองทุก environment (ระบบนี้อ่านเฉพาะ `DATABASE_URL` ตัวเดียว) จากนั้น **Redeploy** หนึ่งครั้ง
+ถ้าไม่ใช้ integration ให้ใส่ `DATABASE_URL` เองตามข้อ 2 · ตารางสร้างจากเครื่องเราด้วย `npm run db:migrate` หนึ่งครั้ง (ตารางอยู่ที่ Neon
+ไม่ผูกกับเครื่องที่รัน) · ใช้ `@neondatabase/serverless` ซึ่งต่อผ่าน WebSocket จึงเหมาะกับ serverless · แนะนำตั้ง **Settings → Functions →
+Function Region = Singapore (sin1)** ให้ฟังก์ชันอยู่ใกล้ฐานข้อมูล (ap-southeast-1) และผู้ใช้ในลาว
 
 หมายเหตุสำหรับ serverless: งานเบื้องหลัง (ทักทายอัตโนมัติ) ใช้ `after()` ของ Next จึงทำงานบน Vercel ได้; แคชในหน่วยความจำ
 (จำนวนงานต่อป้าย, เลขตั๋ว, ตัวนับจำกัดล็อกอิน) เป็นรายอินสแตนซ์ ใช้งานได้แต่ไม่แชร์กัน; ถ้า Chatwoot ตอบช้า route `labels`
@@ -102,6 +120,9 @@ npm run lan       # แสดงที่อยู่ที่เครื่อ
 | `src/components/AdminConsole.tsx` | คอนโซลไอที (รายการ, แถบป้ายกำกับ + ตัวเลขแดง, ห้องแชท) |
 | `src/app/api/admin/*` | พร็อกซี Chatwoot API สำหรับคอนโซล (ล็อกอิน, รายการ, ข้อความ, ป้ายกำกับ, มอบหมาย, ปิดเคส) |
 | `src/lib/session.ts` | เซสชันทีมไอที — token เก็บในคุกกี้ httpOnly เข้ารหัส AES-256-GCM (ต้องมี `SESSION_SECRET`) |
+| `src/lib/db.ts` / `db/schema.sql` / `scripts/db-migrate.mjs` | เชื่อม Neon (pool ต่อโปรเซส), โครงตาราง, สคริปต์สร้างตาราง (`npm run db:migrate`) |
+| `src/lib/ticketRegistry.ts` | ทะเบียน Ticket: ออกเลขถาวรแบบ atomic, ซิงก์สถานะ/ป้าย/ผู้รับผิดชอบจาก Chatwoot, บันทึกเหตุการณ์ |
+| `src/lib/stats.ts` + `src/app/admin/stats` + `src/app/api/admin/stats` | สถิติจากทะเบียน (หน้าเว็บ + JSON API) |
 | `src/components/QrPoster.tsx` | หน้า QR + โปสเตอร์ |
 | `src/components/CosiLogo.tsx` / `AidcLogo.tsx` | โลโก้ COSI (ป้ายตึก, ฝั่งพนักงาน) และโลโก้ AIDC TECH (ฝั่งไอที) |
 

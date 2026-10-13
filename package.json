@@ -9,9 +9,11 @@
     "share": "next build && next start -H 0.0.0.0 -p 3400",
     "lan": "node scripts/lan-info.mjs",
     "lint": "eslint",
-    "check:chatwoot": "node scripts/check-chatwoot.mjs"
+    "check:chatwoot": "node scripts/check-chatwoot.mjs",
+    "db:migrate": "node scripts/db-migrate.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "next": "16.3.8",
     "qrcode": "^1.5.4",
     "react": "19.2.8",

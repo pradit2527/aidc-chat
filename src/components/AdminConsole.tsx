@@ -556,6 +556,13 @@ export default function AdminConsole({ user, onSignedOut, demo = false }: Props)
               <Icon name={sound ? "bell" : "bellOff"} className="h-4 w-4" />
             </button>
             <a
+              href="/admin/stats"
+              title={t("admStats")}
+              className="hidden h-9 place-items-center rounded-full bg-white/10 px-2.5 text-xs font-bold ring-1 ring-white/20 transition hover:bg-white/20 sm:grid"
+            >
+              {t("admStats")}
+            </a>
+            <a
               href="/"
               target="_blank"
               rel="noreferrer"

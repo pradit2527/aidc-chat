@@ -4,6 +4,7 @@ import type { ConversationDTO } from "./adminTypes";
 import { AUTO_GREETING_ENABLED, AUTO_GREETING_TEXT, GREETED_ATTR, shouldGreet, type MsgLite } from "./autoGreeting";
 import { acct, cw, payloadArray } from "./cw";
 import type { Session } from "./session";
+import { logEvent } from "./ticketRegistry";
 
 type Raw = Record<string, unknown>;
 const asObj = (v: unknown): Raw => (v && typeof v === "object" && !Array.isArray(v) ? (v as Raw) : {});
@@ -36,6 +37,7 @@ async function greetIfNewChat(s: Session, c: ConversationDTO): Promise<void> {
     json: { content: AUTO_GREETING_TEXT, message_type: "outgoing", private: false },
   });
   console.log(`[greeter] greeted conversation #${c.id}`);
+  await logEvent(c.id, "greeted", s.user.name, {});
 }
 
 /**

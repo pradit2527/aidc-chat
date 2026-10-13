@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminRoute, parseId } from "@/lib/adminApi";
 import { acct, cw, payloadArray, toMessage } from "@/lib/cw";
+import { logEvent, markFirstReply } from "@/lib/ticketRegistry";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,9 @@ export async function POST(req: Request, { params }: Ctx) {
       const raw = await cw<unknown>(s, acct(`/conversations/${id}/messages`), {
         json: { content, message_type: "outgoing", private: body?.private === true },
       });
+      const isNote = body?.private === true;
+      await logEvent(id, isNote ? "note" : "replied", s.user.name, {});
+      if (!isNote) await markFirstReply(id);
       return { message: toMessage(raw) };
     },
     { mutating: true },

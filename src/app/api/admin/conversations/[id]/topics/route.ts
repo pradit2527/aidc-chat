@@ -4,6 +4,7 @@ import { URGENT_LABEL } from "@/lib/categories";
 import { closeNoticeText } from "@/lib/closeNotice";
 import { acct, cw, toConversation } from "@/lib/cw";
 import { ticketMap } from "@/lib/ticketMap";
+import { logEvent, syncTicket, ticketNoOf } from "@/lib/ticketRegistry";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -54,7 +55,7 @@ export async function POST(req: Request, { params }: Ctx) {
       // เลขตั๋วของเคสนี้ (ใส่ในข้อความแจ้งผู้ใช้) — คำนวณไม่ได้ก็ส่งข้อความได้ตามปกติ
       let ticket: string | null = null;
       try {
-        ticket = (await ticketMap((p) => cw<unknown>(s, p), conv.createdAt)).get(id) ?? null;
+        ticket = (await ticketNoOf(conv)) ?? (await ticketMap((p) => cw<unknown>(s, p), conv.createdAt)).get(id) ?? null;
       } catch {
         // ไม่ใส่เลขตั๋ว
       }
@@ -74,6 +75,16 @@ export async function POST(req: Request, { params }: Ctx) {
       if (resolved) {
         await cw(s, acct(`/conversations/${id}/toggle_status`), { json: { status: "resolved" } });
       }
+      await logEvent(id, "topic_closed", s.user.name, { topics: resolved ? closedList : newlyClosed, resolved });
+      await syncTicket(
+        {
+          ...conv,
+          status: resolved ? "resolved" : conv.status,
+          closedTopics: closedList,
+          updatedAt: Math.floor(Date.now() / 1000),
+        },
+        s.user.name,
+      );
       return { closedTopics: closedList, resolved };
     },
     { mutating: true },

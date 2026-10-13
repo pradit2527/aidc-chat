@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { adminRoute, parseId } from "@/lib/adminApi";
-import { acct, cw } from "@/lib/cw";
+import { acct, cw, toConversation } from "@/lib/cw";
+import { syncTicket } from "@/lib/ticketRegistry";
 
 type Ctx = { params: Promise<{ id: string }> };
+
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 
 /** ปิดเคส (resolved) หรือเปิดใหม่ (open) — เปิดใหม่จะล้างรายการ "หัวข้อที่ปิดแล้ว" ด้วย */
 export async function POST(req: Request, { params }: Ctx) {
@@ -20,6 +23,15 @@ export async function POST(req: Request, { params }: Ctx) {
         await cw(s, acct(`/conversations/${id}/custom_attributes`), {
           json: { custom_attributes: { closed_topics: "" } },
         }).catch(() => {});
+      }
+      // ทะเบียน Ticket: บันทึกสถานะใหม่ทันที (ไม่รอให้รายการเคสโพลล์มาเจอ)
+      const raw = await cw<unknown>(s, acct(`/conversations/${id}`)).catch(() => null);
+      if (raw) {
+        const conv = toConversation(isObj(raw) && isObj(raw.payload) ? raw.payload : raw);
+        await syncTicket(
+          { ...conv, status, closedTopics: status === "open" ? [] : conv.closedTopics, updatedAt: Math.floor(Date.now() / 1000) },
+          s.user.name,
+        );
       }
       return { ok: true, status };
     },
