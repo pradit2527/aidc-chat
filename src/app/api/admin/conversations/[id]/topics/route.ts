@@ -75,7 +75,10 @@ export async function POST(req: Request, { params }: Ctx) {
       if (resolved) {
         await cw(s, acct(`/conversations/${id}/toggle_status`), { json: { status: "resolved" } });
       }
-      await logEvent(id, "topic_closed", s.user.name, { topics: resolved ? closedList : newlyClosed, resolved });
+      // บันทึกเหตุการณ์เฉพาะเมื่อมีอะไรเปลี่ยนจริง (เลือกหัวข้อที่เคสไม่มี/ปิดไปแล้ว → ไม่บันทึก)
+      if (resolved || newlyClosed.length > 0) {
+        await logEvent(id, "topic_closed", s.user.name, { topics: resolved ? closedList : newlyClosed, resolved });
+      }
       await syncTicket(
         {
           ...conv,

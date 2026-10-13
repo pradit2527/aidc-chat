@@ -102,6 +102,17 @@ Function Region = Singapore (sin1)** ให้ฟังก์ชันอยู�
 ไฟล์ที่เกี่ยวข้อง: `Dockerfile` (node 22, build แยกจาก run), `docker-compose.yml` (พอร์ต 3400, healthcheck), `scripts/deploy-server.sh`
 ทะเบียน Ticket ใช้ Neon ฐานเดียวกับ Vercel จึงเห็นเลขตั๋ว/สถิติชุดเดียวกันทั้งสองที่
 
+## การทดสอบ
+
+```bash
+npm test               # unit (jest) — ตรรกะใน src/lib และ route ที่ไม่ต้องใช้ Chatwoot จริง
+npm run test:e2e       # e2e — เปิด Chatwoot จำลอง :4000 + next :3401 + ฐานทดสอบ aidc_chat_test บน Neon แล้วปิดให้เอง
+npm run test:deployed  # smoke อ่านอย่างเดียวกับเซิร์ฟเวอร์ภายใน (E2E_DEPLOYED_URL เปลี่ยนปลายทางได้)
+```
+
+เทสอยู่ที่ `cotester/tests/cases` (unit) และ `cotester/tests/e2e`; e2e ไม่แตะฐานข้อมูลจริง (สคริปต์ปฏิเสธถ้า URL ชี้ `neondb`)
+ผลล่าสุดและรายการที่ยังไม่ครอบคลุม: `docs/test-report-2026-10-13.md`
+
 ## ให้เครื่องอื่นทดสอบระบบจากเครื่องนี้
 
 ```bash

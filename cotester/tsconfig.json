@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "outDir": "./dist-test",
+    "rootDir": "..",
+    "baseUrl": "..",
+    "paths": { "@/*": ["src/*"] },
+    "declaration": false,
+    "sourceMap": true,
+    "types": ["jest", "node"]
+  },
+  "include": ["tests/**/*.ts", "utils/**/*.ts", "../src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

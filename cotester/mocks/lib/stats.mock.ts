@@ -1,0 +1,35 @@
+// Auto-generated mock data for src/lib/stats.ts
+// @cotester-version: 2
+// Do not edit — regenerated on each source change.
+
+export const getStatsMocks = {
+  'handles typical value': { days: 100 },
+  'handles negative value': { days: -50 },
+  'handles zero': { days: 0 },
+  'handles boundary value': { days: Number.MAX_SAFE_INTEGER },
+  'handles rejection gracefully': { days: 100 },
+  'verifies dependency interactions': { days: 100 },
+  'propagates error when dependency fails': { days: 100 },
+  'returns correctly when Array.isArray(r.labels)': { days: 100 },
+  'returns fallback when condition is not met': { days: -50 },
+  'returns correctly when r.resolved === null || r.resolved === undefined': { days: 100 },
+  'uses fallback when num(summary?.open_now) is null/undefined': { days: 100 },
+  'uses num(summary?.open_now) value when defined': { days: -50 },
+  'uses fallback when num(summary?.created_today) is null/undefined': { days: 100 },
+  'uses num(summary?.created_today) value when defined': { days: -50 },
+  'uses fallback when num(summary?.resolved_today) is null/undefined': { days: 100 },
+  'uses num(summary?.resolved_today) value when defined': { days: -50 },
+  'uses fallback when num(summary?.total) is null/undefined': { days: 100 },
+  'uses num(summary?.total) value when defined': { days: -50 },
+  'uses fallback when r.contact_name is truthy is null/undefined': { days: 100 },
+  'uses r.contact_name is truthy value when defined': { days: -50 },
+  'uses fallback when r.department is truthy is null/undefined': { days: 100 },
+  'uses r.department is truthy value when defined': { days: -50 },
+  'uses fallback when r.assignee_name is truthy is null/undefined': { days: 100 },
+  'uses r.assignee_name is truthy value when defined': { days: -50 },
+  'handles case when Number(r.created) || 0': { days: 100 },
+  'handles case when condition is not met': { days: -50 },
+  'handles when summary is truthy is defined': { days: 100 },
+  'handles when summary is truthy is null/undefined (optional chain short-circuits)': { days: -50 },
+  'handles optional params omitted': { days: undefined },
+};

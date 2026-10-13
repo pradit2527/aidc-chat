@@ -1,0 +1,40 @@
+{
+  "watchPatterns": [
+    "src/**/*.ts"
+  ],
+  "ignorePatterns": [
+    "node_modules",
+    "cotester",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "testDir": "cotester/tests",
+  "mockDir": "cotester/mocks",
+  "srcDir": "src",
+  "minCoverage": 80,
+  "framework": "jest",
+  "scenarioRules": {
+    "number": [
+      "handles typical value",
+      "handles negative value",
+      "handles zero",
+      "handles boundary value"
+    ],
+    "string": [
+      "handles valid input",
+      "handles empty string",
+      "handles special characters",
+      "handles whitespace-only input"
+    ],
+    "boolean": [
+      "handles truthy condition",
+      "handles falsy condition"
+    ],
+    "default": [
+      "handles default case"
+    ],
+    "tableThreshold": 3,
+    "snapshotForComplexTypes": false
+  }
+}

@@ -17,3 +17,9 @@ next-env.d.ts
 .DS_Store
 *.pem
 npm-debug.log*
+
+# ผลเทส
+/cotester/e2e/.*.log
+/cotester/coverage/
+/cotester/.cache/
+/cotester/.audit.jsonl
