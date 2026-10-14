@@ -41,11 +41,15 @@ describe("toConversation", () => {
     expect(toConversation(rawConv({ unread_count: 0 })).unread).toBe(1);
     expect(toConversation(rawConv({ unread_count: 3 })).unread).toBe(3);
   });
-  test("ตัวเลขแจ้งเตือน: เคส resolved หรือข้อความล่าสุดเป็นของเจ้าหน้าที่ → ใช้ unread_count ตามจริง", () => {
-    expect(toConversation(rawConv({ status: "resolved" })).unread).toBe(0);
-    expect(
-      toConversation(rawConv({ last_non_activity_message: { message_type: 1, content: "ok", created_at: 1 } })).unread,
-    ).toBe(0);
+  test("ตัวเลขแจ้งเตือน: เคสปิดแล้ว → 0 เสมอ แม้ Chatwoot ยังนับ unread ค้าง (ผู้ใช้กำหนด)", () => {
+    expect(toConversation(rawConv({ status: "resolved", unread_count: 0 })).unread).toBe(0);
+    expect(toConversation(rawConv({ status: "resolved", unread_count: 5 })).unread).toBe(0);
+    expect(toConversation(rawConv({ status: "pending", unread_count: 2 })).unread).toBe(0);
+  });
+  test("ตัวเลขแจ้งเตือน: ข้อความล่าสุดเป็นของเจ้าหน้าที่/บอท → 0 (ตอบแล้ว ไม่ต้องเตือน)", () => {
+    const agentLast = { last_non_activity_message: { message_type: 1, content: "ok", created_at: 1 } };
+    expect(toConversation(rawConv({ ...agentLast, unread_count: 0 })).unread).toBe(0);
+    expect(toConversation(rawConv({ ...agentLast, unread_count: 3 })).unread).toBe(0);
   });
 
   test("สถานะที่ไม่รู้จัก → open, ชื่อหาย → —, ผู้รับผิดชอบหาย → null", () => {

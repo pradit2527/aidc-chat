@@ -76,8 +76,10 @@ export function toConversation(raw: unknown): ConversationDTO {
   const status: ConvStatus = (["open", "resolved", "pending", "snoozed"] as const).find((s) => s === rawStatus) ?? "open";
   const kind = last.message_type;
   const fromContact = kind === 0 || kind === "incoming";
-  // "รอไอทีตอบ" = ข้อความล่าสุดเป็นของลูกค้าและเคสยังเปิดอยู่ — ใช้เป็นตัวเลขแจ้งเตือนอย่างน้อย 1
-  // เพราะ unread_count ของ Chatwoot จะเป็น 0 ทันทีที่ใครสักคนกด "อ่านแล้ว" ที่ไหนก็ตาม (เช่น หน้า Chatwoot เอง)
+  // ตัวเลขแจ้งเตือน (แดง) = "เคสเปิดอยู่และลูกค้ารอการตอบกลับ" เท่านั้น (ผู้ใช้กำหนด)
+  //   - เคสที่ปิดแล้ว (resolved) → 0 เสมอ แม้ Chatwoot ยังนับ unread_count ค้างอยู่
+  //   - ข้อความล่าสุดเป็นของเจ้าหน้าที่/บอท → 0 (ตอบไปแล้ว ไม่ต้องเตือน)
+  //   - ข้อความล่าสุดเป็นของลูกค้า → อย่างน้อย 1 แม้ unread_count = 0 (Chatwoot รีเซ็ตเมื่อใครเปิดดูที่ไหนก็ตาม)
   const awaitingReply = fromContact && status === "open";
   // หัวข้อที่ปิดแล้ว เก็บเป็น custom attribute `closed_topics` (ข้อความคั่นด้วยจุลภาค)
   const closedRaw = str(obj(c.custom_attributes).closed_topics);
@@ -88,7 +90,7 @@ export function toConversation(raw: unknown): ConversationDTO {
   return {
     id: num(c.id),
     status,
-    unread: Math.max(num(c.unread_count), awaitingReply ? 1 : 0),
+    unread: awaitingReply ? Math.max(num(c.unread_count), 1) : 0,
     updatedAt: num(c.timestamp) || num(last.created_at) || num(c.created_at),
     createdAt: num(c.created_at) || num(c.timestamp) || num(last.created_at),
     ticket: null,
