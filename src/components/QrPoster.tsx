@@ -205,8 +205,8 @@ function Poster({ publicUrl, showTools }: { publicUrl: string; showTools: boolea
                 <CosiLogo className="h-7" />
                 COSI HOTEL
               </div>
-              <h2 className="mt-1.5 text-2xl font-bold leading-tight">ແຈ້ງບັນຫາໄອທີ</h2>
-              <p className="text-sm text-white/90">Report an IT problem</p>
+              <h2 className="mt-1.5 text-2xl font-bold leading-tight">ລະບົບການແຈ້ງບັນຫາ</h2>
+              <p className="text-sm text-white/90">Ticket System</p>
             </div>
           </div>
           <div className="h-1 bg-brand-500" />

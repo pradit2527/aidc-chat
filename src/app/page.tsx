@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "COSI Hotel · QR Code",
-  description: "ສະແກນ QR ເພື່ອແຈ້ງບັນຫາໄອທີ COSI Hotel",
+  description: "ສະແກນ QR ເຂົ້າລະບົບການແຈ້ງບັນຫາ COSI Hotel (Ticket System)",
 };
 
 // ชื่ออินเทอร์เฟซเสมือน (Hyper-V / VM / Docker / WSL ฯลฯ) ที่มือถือในวง Wi-Fi เข้าถึงไม่ได้
