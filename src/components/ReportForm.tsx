@@ -338,29 +338,25 @@ function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
                         <Icon name="plus" className="h-4 w-4" />
                         {t("rpAdd")}
                       </button>
+                      {uploads && (
+                        <button
+                          type="button"
+                          onClick={() => fileInput.current?.click()}
+                          disabled={files.length >= UPLOAD_LIMITS.files}
+                          title={t("rpAttach")}
+                          aria-label={t("rpAttach")}
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-brand-300 bg-white text-brand-700 transition hover:bg-brand-50 disabled:opacity-40 md:h-9 md:w-9"
+                        >
+                          <Icon name="clip" className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
               })}
 
-              <label
-                className={`mt-3 flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
-                  urgent ? "border-rose-300 bg-rose-50" : "border-stone-200 bg-white hover:border-rose-200"
-                }`}
-              >
-                <input type="checkbox" checked={urgent} disabled={!ready} onChange={(e) => setUrgent(e.target.checked)} className="mt-1 h-4 w-4 accent-rose-600" />
-                <span className="min-w-0">
-                  <span className="flex items-center gap-1.5 text-sm font-semibold text-rose-700">
-                    <Icon name="alert" className="h-4 w-4" />
-                    {t("urgentLabel")}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-stone-500">{t("urgentHint")}</span>
-                </span>
-              </label>
-            </div>
-
             {/* ไฟล์แนบ: รูป / วิดีโอ */}
-            <div className={ready ? "" : "pointer-events-none opacity-50"} aria-disabled={!ready}>
+            <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50/60 p-4">
               <h2 className="text-base font-semibold">{t("rpAttachTitle")}</h2>
               <p className="mt-0.5 text-sm text-stone-500">{uploads ? t("rpAttachHint") : t("rpAttachNotAvailable")}</p>
               {uploads && (
@@ -381,7 +377,7 @@ function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
                       type="button"
                       disabled={!ready || files.length >= UPLOAD_LIMITS.files}
                       onClick={() => fileInput.current?.click()}
-                      className="flex items-center gap-2 rounded-lg border border-dashed border-brand-400 bg-brand-50/60 px-4 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 disabled:opacity-40"
+                      className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand-600/25 transition hover:brightness-110 disabled:opacity-40"
                     >
                       <Icon name="clip" className="h-4 w-4" />
                       {t("rpAttach")}
@@ -425,6 +421,23 @@ function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
                   )}
                 </>
               )}
+            </div>
+
+
+              <label
+                className={`mt-3 flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                  urgent ? "border-rose-300 bg-rose-50" : "border-stone-200 bg-white hover:border-rose-200"
+                }`}
+              >
+                <input type="checkbox" checked={urgent} disabled={!ready} onChange={(e) => setUrgent(e.target.checked)} className="mt-1 h-4 w-4 accent-rose-600" />
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-rose-700">
+                    <Icon name="alert" className="h-4 w-4" />
+                    {t("urgentLabel")}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-stone-500">{t("urgentHint")}</span>
+                </span>
+              </label>
             </div>
 
             {/* ส่ง */}

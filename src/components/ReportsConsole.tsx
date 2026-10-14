@@ -60,9 +60,13 @@ function Console({ user }: { user: AdminUser }) {
   const reports = useMemo(() => data?.reports ?? [], [data]);
   const selected = reports.find((r) => r.id === selectedId) ?? null;
 
-  /** หลังทำรายการ: แทนที่รายงานในรายการ (ถ้าสถานะเปลี่ยนแท็บ จะหายไปเองในรอบโหลดถัดไป) */
+  /**
+   * หลังทำรายการ: แทนที่รายงานในรายการ และถ้าสถานะเปลี่ยนจนไม่อยู่ในแท็บปัจจุบัน (เช่น ติ๊กข้อแรกของงานใหม่ → กำลังทำ,
+   * ติ๊กครบ → สำเร็จ) ให้สลับแท็บตามงานนั้นไปเลย เพื่อให้เห็นว่างานย้ายไปอยู่แถบไหน (ยังเลือกงานเดิมค้างไว้)
+   */
   function replace(r: ReportDTO) {
     setData((d) => (d ? { ...d, reports: d.reports.map((x) => (x.id === r.id ? r : x)) } : d));
+    if (tab !== "all" && r.status !== tab) setTab(r.status);
   }
 
   const tabLabel = (x: Tab) => (x === "new" ? t("rcTabNew") : x === "in_progress" ? t("rcTabProgress") : x === "done" ? t("rcTabDone") : t("rcTabAll"));
