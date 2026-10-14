@@ -28,7 +28,7 @@ export type Stats = {
     createdAt: number;
     resolvedAt: number | null;
   }[];
-  /** การแบ่งหน้าของ recent (หน้าละ 30) */
+  /** การแบ่งหน้าของ recent (หน้าละ 12 — ผู้ใช้กำหนด) */
   recentTotal: number;
   recentPage: number;
   recentPages: number;
@@ -37,7 +37,7 @@ export type Stats = {
 type S = Record<string, string | null>;
 const num = (v: string | null | undefined) => (v === null || v === undefined || v === "" ? null : Number(v));
 
-export const RECENT_PER_PAGE = 30;
+export const RECENT_PER_PAGE = 12;
 
 export async function getStats(days = 14, recentPage = 1): Promise<Stats> {
   const today = ticketDate(Math.floor(Date.now() / 1000));
