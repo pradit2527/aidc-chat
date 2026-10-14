@@ -250,14 +250,14 @@ describe("ไฟล์แนบ (รูป/วิดีโอ)", () => {
   });
 });
 
-describe("รายงานของฉัน (GET /api/reports/mine) — หน้าละ 30", () => {
+describe("รายงานของฉัน (GET /api/reports/mine) — หน้าละ 12", () => {
   test("เห็นเฉพาะรายงานของ identifier ตัวเอง พร้อมสถานะ/ผู้รับเรื่อง/จำนวนข้อ เรียงล่าสุดก่อน", async () => {
     const r = (await staff.get(`/api/reports/mine?who=${identifier}`)).json as {
       enabled: boolean; total: number; page: number; pages: number; perPage: number;
       reports: { ticketNo: string; status: string; assignee: string; itemsDone: number; itemsTotal: number }[];
     };
     expect(r.enabled).toBe(true);
-    expect(r.perPage).toBe(30);
+    expect(r.perPage).toBe(12);
     expect(r.page).toBe(1);
     expect(r.total).toBeGreaterThanOrEqual(3);
     expect(r.reports.length).toBe(r.total);
