@@ -72,7 +72,7 @@ describe("1. ล็อกอิน", () => {
   test("หลังล็อกอิน /admin = หน้าหลักทีมไอที (เลือกแชท/แจ้งปัญหา), /admin/chat = คอนโซลแชท, ?c= เปิดเคสได้", async () => {
     const hub = await c.get("/admin");
     expect(hub.status).toBe(200);
-    expect(hub.text).toContain("ເລືອກໜ້າຈໍ");
+    expect(hub.text).toContain("Helpdesk Support");
     expect(hub.text).toContain('href="/admin/chat"');
     expect(hub.text).toContain('href="/admin/reports"');
     expect(hub.text).not.toMatch(/type="password"/);

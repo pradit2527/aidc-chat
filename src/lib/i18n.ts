@@ -317,7 +317,7 @@ const M = {
   hubPrev: { lo: "ກ່ອນໜ້າ", en: "Previous" },
   hubNext: { lo: "ຖັດໄປ", en: "Next" },
   // ---- หน้าหลักทีมไอที (/admin หลังล็อกอิน) ----
-  ahTitle: { lo: "ເລືອກໜ້າຈໍ", en: "Choose a console" },
+  ahTitle: { lo: "Helpdesk Support", en: "Helpdesk Support" },
   ahSub: { lo: "ສະບາຍດີ {name} — ເລືອກລະບົບແຊັດ ຫຼື ງານແຈ້ງບັນຫາ, ຫຼືກົດລາຍການທີ່ຄ້າງຢູ່ດ້ານລຸ່ມໄດ້ເລີຍ", en: "Hello {name} — open the chat or reports console, or jump straight into a pending item below" },
   ahChat: { lo: "ລະບົບແຊັດ", en: "Chat console" },
   ahChatHint: { lo: "ຕອບແຊັດພະນັກງານ, ປິດເຄສ, ມອບໝາຍ", en: "Reply to staff chats, close cases, assign" },
