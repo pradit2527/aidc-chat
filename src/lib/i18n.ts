@@ -330,6 +330,8 @@ const M = {
   ahEmptyReports: { lo: "ບໍ່ມີງານຄ້າງ", en: "No pending reports" },
   ahViewAll: { lo: "ເບິ່ງທັງໝົດ", en: "View all" },
   admHome: { lo: "ໜ້າຫຼັກ", en: "Home" },
+  stDays: { lo: "{n} ມື້", en: "{n} days" },
+  stRange: { lo: "ຊ່ວງເວລາ", en: "Range" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type MsgKey = keyof typeof M;

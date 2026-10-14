@@ -129,12 +129,12 @@ function Console({ user, initialReportId }: { user: AdminUser; initialReportId: 
                 }}
                 aria-pressed={tab === x}
                 className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                  tab === x ? "bg-deep-700 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  tab === x ? "bg-brand-600 text-white shadow-md shadow-brand-600/25" : "bg-brand-50 text-brand-800 ring-1 ring-brand-100 hover:bg-brand-100"
                 }`}
               >
                 {tabLabel(x)}
                 {tabCount(x) !== null && (
-                  <span className={`rounded-full px-1.5 text-[11px] ${tab === x ? "bg-white/20" : x === "new" && tabCount(x)! > 0 ? "bg-red-600 text-white" : "bg-stone-200"}`}>
+                  <span className={`rounded-full px-1.5 text-[11px] ${tab === x ? "bg-white/25" : x === "new" && tabCount(x)! > 0 ? "bg-red-600 text-white" : "bg-white text-brand-800 ring-1 ring-brand-100"}`}>
                     {tabCount(x)}
                   </span>
                 )}
@@ -148,7 +148,14 @@ function Console({ user, initialReportId }: { user: AdminUser; initialReportId: 
               </p>
             )}
             {data && !data.enabled && <p className="m-3 text-sm text-rose-700">{t("rcNoDb")}</p>}
-            {data?.enabled && reports.length === 0 && <p className="p-6 text-center text-sm text-stone-400">{t("rcEmpty")}</p>}
+            {data?.enabled && reports.length === 0 && (
+              <div className="flex flex-col items-center gap-2 p-8 text-center text-sm text-stone-400">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-50 text-brand-400">
+                  <Icon name="clipboard" className="h-5 w-5" />
+                </span>
+                {t("rcEmpty")}
+              </div>
+            )}
             {reports.map((r) => {
               const done = r.items.filter((i) => i.done).length;
               const on = r.id === selectedId;
@@ -157,7 +164,7 @@ function Console({ user, initialReportId }: { user: AdminUser; initialReportId: 
                   key={r.id}
                   type="button"
                   onClick={() => setSelectedId(r.id)}
-                  className={`block w-full border-b border-stone-100 px-4 py-3 text-left transition ${on ? "bg-brand-50" : "hover:bg-stone-50"}`}
+                  className={`block w-full border-b border-l-4 border-stone-100 px-4 py-3 text-left transition ${on ? "border-l-brand-500 bg-brand-50" : "border-l-transparent hover:bg-brand-50/40"}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold tabular-nums text-brand-700">{r.ticketNo}</span>
@@ -190,7 +197,12 @@ function Console({ user, initialReportId }: { user: AdminUser; initialReportId: 
           {selected ? (
             <Detail key={selected.id} r={selected} user={user} agents={agents} onChange={replace} onBack={() => setSelectedId(null)} />
           ) : (
-            <p className="p-10 text-center text-sm text-stone-400">{t("rcPick")}</p>
+            <div className="flex flex-col items-center gap-2 p-12 text-center text-sm text-stone-400">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-50 text-brand-400">
+                <Icon name="clipboard" className="h-6 w-6" />
+              </span>
+              {t("rcPick")}
+            </div>
           )}
         </section>
       </div>
@@ -265,9 +277,9 @@ function Detail({
       </div>
 
       {/* การกระทำ */}
-      <div className="card flex flex-wrap items-center gap-2 p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
         {r.status === "new" && (
-          <button type="button" disabled={busy} onClick={() => act({ action: "start" })} className="rounded-full bg-deep-700 px-4 py-2 text-sm font-semibold text-white hover:bg-deep-800 disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={() => act({ action: "start" })} className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-600/25 hover:brightness-110 disabled:opacity-50">
             {t("rcStart")}
           </button>
         )}
@@ -287,7 +299,7 @@ function Detail({
             value={r.assignee}
             disabled={busy}
             onChange={(e) => act({ action: "assign", assignee: e.target.value })}
-            className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm"
+            className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200"
           >
             <option value="">{t("rcUnassigned")}</option>
             {names.map((n) => (
@@ -305,15 +317,20 @@ function Detail({
       )}
 
       {/* รายการข้อ */}
-      <div className="card p-4">
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">{t("rcItems")}</h3>
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-deep-800">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand-600">
+              <Icon name="list" className="h-4 w-4" />
+            </span>
+            {t("rcItems")}
+          </h3>
           <span className="text-xs text-stone-500">{t("rcItemsDone", { done, total: r.items.length })}</span>
         </div>
         <p className="mt-0.5 text-xs text-stone-400">{t("rcAutoClosed")}</p>
         <div className="mt-3 space-y-3">
           {[...byTopic].map(([topic, items]) => (
-            <div key={topic} className="rounded-xl border border-stone-200 p-3">
+            <div key={topic} className="rounded-xl border border-l-4 border-stone-200 border-l-brand-400 bg-stone-50/40 p-3">
               <h4 className="text-sm font-semibold text-deep-800">{labelName(`cosi-${topic}`, lang)}</h4>
               <ul className="mt-2 space-y-1.5">
                 {items.map((i) => (
@@ -338,15 +355,20 @@ function Detail({
       </div>
 
       {r.files.length > 0 && (
-        <div className="card p-4">
+        <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
           <ReportFiles files={r.files} title={t("rcFiles")} />
         </div>
       )}
 
       {/* บันทึกภายใน */}
-      <div className="card p-4">
-        <label className="block text-sm font-semibold">
-          {t("rcNote")}
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+        <label className="block text-sm font-semibold text-deep-800">
+          <span className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand-600">
+              <Icon name="lock" className="h-4 w-4" />
+            </span>
+            {t("rcNote")}
+          </span>
           <textarea
             value={note}
             onChange={(e) => {
@@ -365,7 +387,7 @@ function Detail({
             onClick={async () => {
               if (await act({ action: "note", note })) setSaved(true);
             }}
-            className="rounded-full bg-deep-700 px-4 py-1.5 text-sm font-semibold text-white hover:bg-deep-800 disabled:opacity-40"
+            className="rounded-full bg-brand-600 px-4 py-1.5 text-sm font-semibold text-white shadow-md shadow-brand-600/25 hover:brightness-110 disabled:opacity-40"
           >
             {t("rcSaveNote")}
           </button>

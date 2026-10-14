@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { labelName } from "@/lib/adminClient";
+import { Icon } from "@/components/Icon";
 import { SignOutButton } from "@/components/SignOutButton";
+import { initialOf, labelName } from "@/lib/adminClient";
 import { dbEnabled } from "@/lib/db";
 import { DEFAULT_LANG, isLang, LANG_COOKIE, translate, type Lang, type MsgKey } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
@@ -16,10 +17,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const DAY_OPTIONS = [7, 14, 30, 90];
+const RANGES = [7, 14, 30, 90];
 const fmtAt = (sec: number | null) => (sec ? `${ticketDate(sec)} ${laoTime(sec)}` : "—");
 
-/** หน้าสถิติจากทะเบียน Ticket ใน Neon — ต้องล็อกอินคอนโซลก่อน (ไม่มีเซสชันจะเด้งไป /admin) */
+/** หน้าสถิติจากทะเบียน Ticket ใน Neon — โทนขาว/ส้ม เรียบ อ่านง่าย (ต้องล็อกอินคอนโซลก่อน) */
 export default async function StatsPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const [{ days: daysParam }, jar] = await Promise.all([searchParams, cookies()]);
   const saved = jar.get(LANG_COOKIE)?.value;
@@ -42,143 +43,200 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
     if (n < 60) return t("stMinutes", { n });
     return t("stHours", { h: Math.floor(n / 60), m: n % 60 });
   };
+  const statusChip = (status: string) =>
+    status === "resolved" ? (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+        <Icon name="check" className="h-3 w-3" />
+        {t("admStatusResolved")}
+      </span>
+    ) : (
+      <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-brand-100">
+        {t("admStatusOpen")}
+      </span>
+    );
 
-  const cards: [MsgKey, string][] = stats
+  const kpis: { key: MsgKey; value: string; icon: "chat" | "plus" | "check" | "zap" | "send" | "list"; accent?: boolean }[] = stats
     ? [
-        ["stOpenNow", String(stats.summary.openNow)],
-        ["stCreatedToday", String(stats.summary.createdToday)],
-        ["stResolvedToday", String(stats.summary.resolvedToday)],
-        ["stAvgResolve", minutes(stats.summary.avgResolveMin)],
-        ["stAvgFirstReply", minutes(stats.summary.avgFirstReplyMin)],
-        ["stTotal", String(stats.summary.total)],
+        { key: "stOpenNow", value: String(stats.summary.openNow), icon: "chat", accent: true },
+        { key: "stCreatedToday", value: String(stats.summary.createdToday), icon: "plus" },
+        { key: "stResolvedToday", value: String(stats.summary.resolvedToday), icon: "check" },
+        { key: "stAvgResolve", value: minutes(stats.summary.avgResolveMin), icon: "zap" },
+        { key: "stAvgFirstReply", value: minutes(stats.summary.avgFirstReplyMin), icon: "send" },
+        { key: "stTotal", value: String(stats.summary.total), icon: "list" },
       ]
     : [];
 
+  const maxDay = stats ? Math.max(1, ...stats.perDay.map((d) => d.created)) : 1;
+  const maxLabel = stats ? Math.max(1, ...stats.perLabel.map((l) => l.total)) : 1;
+  const maxAgent = stats ? Math.max(1, ...stats.perAgent.map((a) => a.total)) : 1;
+
   return (
-    <div className="min-h-screen">
-      <header className="hero text-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <h1 className="text-base font-semibold">{t("stTitle")}</h1>
-          <nav className="flex items-center gap-2 text-xs" aria-label="Range">
-            {DAY_OPTIONS.map((d) => (
+    <div className="min-h-screen bg-canvas">
+      {/* ส่วนหัว: ขาว เส้นส้มด้านล่าง */}
+      <header className="border-b-2 border-brand-500 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-600 text-white shadow-md shadow-brand-600/25">
+              <Icon name="list" className="h-5 w-5" />
+            </span>
+            <div className="leading-tight">
+              <h1 className="text-lg font-bold text-deep-800">{t("stTitle")}</h1>
+              <p className="text-xs text-stone-500">
+                {t("admBrand")} · {t("stDays", { n: days })}
+              </p>
+            </div>
+          </div>
+          <nav className="flex flex-wrap items-center gap-1.5" aria-label={t("stRange")}>
+            {RANGES.map((d) => (
               <a
                 key={d}
                 href={`/admin/stats?days=${d}`}
                 aria-current={d === days ? "page" : undefined}
-                className={`rounded-full px-3 py-1 font-semibold transition ${
-                  d === days ? "bg-white text-deep-800" : "bg-white/15 ring-1 ring-white/25 hover:bg-white/25"
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  d === days ? "bg-brand-600 text-white shadow-md shadow-brand-600/25" : "bg-brand-50 text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100"
                 }`}
               >
-                {d}d
+                {t("stDays", { n: d })}
               </a>
             ))}
-            <a href="/admin" className="ml-2 rounded-full bg-brand-600 px-3 py-1 font-semibold transition hover:bg-brand-700">
-              {t("stBack")}
+            <a
+              href="/admin"
+              className="ml-2 inline-flex items-center gap-1 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700 ring-1 ring-stone-200 transition hover:bg-stone-200"
+            >
+              <Icon name="back" className="h-3.5 w-3.5" />
+              {t("admHome")}
             </a>
-            <SignOutButton label={t("admSignOut")} className="ml-1" />
+            <SignOutButton label={t("admSignOut")} variant="light" />
           </nav>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
         {!stats ? (
-          <p role="alert" className="card p-5 text-sm text-rose-700">
+          <p role="alert" className="rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm text-rose-700">
             {t("stNoDb")}
           </p>
         ) : (
           <>
-            <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6" aria-label="Summary">
-              {cards.map(([k, v]) => (
-                <div key={k} className="card p-4">
-                  <div className="text-[11px] font-medium text-stone-500">{t(k)}</div>
-                  <div className="mt-1 text-2xl font-bold tabular-nums text-deep-800">{v}</div>
+            {/* ตัวเลขสรุป */}
+            <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6" aria-label="Summary">
+              {kpis.map((k) => (
+                <div
+                  key={k.key}
+                  className={`rounded-2xl border p-4 shadow-sm ${k.accent ? "border-brand-200 bg-gradient-to-br from-brand-50 to-white" : "border-stone-200 bg-white"}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-medium leading-snug text-stone-500">{t(k.key)}</span>
+                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${k.accent ? "bg-brand-600 text-white" : "bg-brand-50 text-brand-600"}`}>
+                      <Icon name={k.icon} className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div className={`mt-2 text-2xl font-bold leading-tight tabular-nums ${k.accent ? "text-brand-700" : "text-deep-800"}`}>{k.value}</div>
                 </div>
               ))}
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-              <Table
-                title={t("stPerDay", { n: days })}
-                head={[t("stColDay"), t("stColCreated"), t("stColResolved"), t("stColUrgent")]}
-                rows={stats.perDay.map((r) => [r.day, r.created, r.resolved, r.urgent])}
-                empty={t("stEmpty")}
-              />
-              <Table
-                title={t("stPerLabel")}
-                head={[t("stColLabel"), t("stColTotal"), t("stColOpen")]}
-                rows={stats.perLabel.map((r) => [labelName(r.label, lang), r.total, r.open])}
-                empty={t("stEmpty")}
-              />
-              <Table
-                title={t("stPerAgent")}
-                head={[t("stColAgent"), t("stColTotal"), t("stColOpen"), t("stColResolved")]}
-                rows={stats.perAgent.map((r) => [r.agent, r.total, r.open, r.resolved])}
-                empty={t("stEmpty")}
-              />
+            {/* ตารางสรุป 3 ตาราง */}
+            <div className="grid gap-4 lg:grid-cols-3">
+              <Panel title={t("stPerDay", { n: days })} icon="list">
+                <DataTable
+                  head={[t("stColDay"), t("stColCreated"), t("stColResolved"), t("stColUrgent")]}
+                  empty={t("stEmpty")}
+                  rows={stats.perDay.map((r) => ({
+                    key: r.day,
+                    cells: [r.day, <Bar key="c" value={r.created} max={maxDay} />, r.resolved, <Urgent key="u" n={r.urgent} />],
+                  }))}
+                />
+              </Panel>
+              <Panel title={t("stPerLabel")} icon="list">
+                <DataTable
+                  head={[t("stColLabel"), t("stColTotal"), t("stColOpen")]}
+                  empty={t("stEmpty")}
+                  rows={stats.perLabel.map((r) => ({
+                    key: r.label,
+                    cells: [labelName(r.label, lang), <Bar key="t" value={r.total} max={maxLabel} />, <OpenCount key="o" n={r.open} />],
+                  }))}
+                />
+              </Panel>
+              <Panel title={t("stPerAgent")} icon="user">
+                <DataTable
+                  head={[t("stColAgent"), t("stColTotal"), t("stColOpen"), t("stColResolved")]}
+                  empty={t("stEmpty")}
+                  rows={stats.perAgent.map((r) => ({
+                    key: r.agent,
+                    cells: [
+                      <span key="a" className="flex items-center gap-2">
+                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-deep-700 text-xs font-bold text-white">{initialOf(r.agent)}</span>
+                        <span className="truncate">{r.agent}</span>
+                      </span>,
+                      <Bar key="t" value={r.total} max={maxAgent} />,
+                      <OpenCount key="o" n={r.open} />,
+                      r.resolved,
+                    ],
+                  }))}
+                />
+              </Panel>
             </div>
 
-            <section className="card overflow-x-auto p-4">
-              <h2 className="mb-3 text-sm font-semibold">{t("stRecent")}</h2>
-              <table className="w-full min-w-[640px] text-sm">
-                <thead className="text-left text-xs text-stone-500">
-                  <tr>
-                    {[
-                      t("stColTicket"),
-                      t("stColName"),
-                      t("stColLabel"),
-                      t("stColStatus"),
-                      t("stColAgent"),
-                      t("stColCreatedAt"),
-                      t("stColResolvedAt"),
-                    ].map((h) => (
-                      <th key={h} className="pb-2 pr-4 font-medium">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {stats.recent.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="py-6 text-center text-stone-400">
-                        {t("stEmpty")}
-                      </td>
+            {/* Ticket ล่าสุด */}
+            <Panel title={t("stRecent")} icon="chat" count={stats.recent.length}>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-sm">
+                  <thead>
+                    <tr className="bg-brand-50 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-800">
+                      {[t("stColTicket"), t("stColName"), t("stColLabel"), t("stColStatus"), t("stColAgent"), t("stColCreatedAt"), t("stColResolvedAt")].map((h, i) => (
+                        <th key={h} className={`px-3 py-2.5 ${i === 0 ? "rounded-l-xl" : ""} ${i === 6 ? "rounded-r-xl" : ""}`}>
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  )}
-                  {stats.recent.map((r) => (
-                    <tr key={r.id}>
-                      <td className="py-2 pr-4 font-semibold tabular-nums">
-                        {r.ticketNo}
-                        {r.urgent && (
-                          <span className="ml-1 rounded bg-rose-50 px-1 text-[10px] font-bold text-rose-700" title="urgent">
-                            !
+                  </thead>
+                  <tbody>
+                    {stats.recent.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-stone-400">
+                          {t("stEmpty")}
+                        </td>
+                      </tr>
+                    )}
+                    {stats.recent.map((r) => (
+                      <tr key={r.id} className="border-b border-stone-100 transition last:border-0 odd:bg-white even:bg-stone-50/60 hover:bg-brand-50/40">
+                        <td className="whitespace-nowrap px-3 py-2.5 font-semibold tabular-nums text-brand-700">
+                          {r.ticketNo}
+                          {r.urgent && (
+                            <span className="ml-1.5 inline-flex items-center rounded-full bg-rose-50 px-1.5 text-[10px] font-bold text-rose-700 ring-1 ring-rose-100" title="urgent">
+                              !
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className="flex items-center gap-2">
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-deep-700 text-xs font-bold text-white">{initialOf(r.name)}</span>
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium text-stone-800">{r.name}</span>
+                              {r.department && <span className="block truncate text-xs text-stone-500">{r.department}</span>}
+                            </span>
                           </span>
-                        )}
-                      </td>
-                      <td className="py-2 pr-4">
-                        {r.name}
-                        {r.department && <span className="block text-xs text-stone-500">{r.department}</span>}
-                      </td>
-                      <td className="py-2 pr-4 text-xs text-stone-600">
-                        {r.labels.map((l) => labelName(l, lang)).join(", ")}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                            r.status === "resolved" ? "bg-emerald-50 text-emerald-700" : "bg-amber-100 text-amber-900"
-                          }`}
-                        >
-                          {r.status}
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4 text-xs">{r.assignee || "—"}</td>
-                      <td className="py-2 pr-4 text-xs tabular-nums">{fmtAt(r.createdAt)}</td>
-                      <td className="py-2 pr-4 text-xs tabular-nums">{fmtAt(r.resolvedAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className="flex flex-wrap gap-1">
+                            {r.labels.map((l) => (
+                              <span key={l} className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-700 ring-1 ring-stone-200">
+                                {labelName(l, lang)}
+                              </span>
+                            ))}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2.5">{statusChip(r.status)}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5 text-xs text-stone-700">{r.assignee || "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-stone-600">{fmtAt(r.createdAt)}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-stone-600">{fmtAt(r.resolvedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
           </>
         )}
       </main>
@@ -186,39 +244,74 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
   );
 }
 
-function Table({ title, head, rows, empty }: { title: string; head: string[]; rows: (string | number)[][]; empty: string }) {
+/** กล่องตารางสีขาว หัวข้อพร้อมไอคอนส้ม */
+function Panel({ title, icon, count, children }: { title: string; icon: "list" | "user" | "chat"; count?: number; children: React.ReactNode }) {
   return (
-    <section className="card p-4">
-      <h2 className="mb-3 text-sm font-semibold">{title}</h2>
-      <table className="w-full text-sm">
-        <thead className="text-left text-xs text-stone-500">
-          <tr>
-            {head.map((h, i) => (
-              <th key={h} className={`pb-2 font-medium ${i > 0 ? "text-right" : ""}`}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-stone-100">
-          {rows.length === 0 && (
-            <tr>
-              <td colSpan={head.length} className="py-6 text-center text-stone-400">
-                {empty}
-              </td>
-            </tr>
-          )}
-          {rows.map((r, i) => (
-            <tr key={i}>
-              {r.map((cell, j) => (
-                <td key={j} className={`py-1.5 ${j > 0 ? "text-right tabular-nums" : ""}`}>
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-deep-800">
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand-600">
+          <Icon name={icon} className="h-4 w-4" />
+        </span>
+        {title}
+        {count !== undefined && <span className="text-xs font-normal text-stone-400">({count})</span>}
+      </h2>
+      {children}
     </section>
   );
+}
+
+/** ตารางมาตรฐาน: หัวส้มอ่อน แถวสลับสี ตัวเลขชิดขวา */
+function DataTable({ head, rows, empty }: { head: string[]; rows: { key: string; cells: React.ReactNode[] }[]; empty: string }) {
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="bg-brand-50 text-[11px] font-semibold uppercase tracking-wide text-brand-800">
+          {head.map((h, i) => (
+            <th key={h} className={`px-2.5 py-2 ${i === 0 ? "rounded-l-xl text-left" : "text-right"} ${i === head.length - 1 ? "rounded-r-xl" : ""}`}>
+              {h}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length === 0 && (
+          <tr>
+            <td colSpan={head.length} className="py-6 text-center text-stone-400">
+              {empty}
+            </td>
+          </tr>
+        )}
+        {rows.map((r) => (
+          <tr key={r.key} className="border-b border-stone-100 transition last:border-0 odd:bg-white even:bg-stone-50/60 hover:bg-brand-50/40">
+            {r.cells.map((cell, j) => (
+              <td key={j} className={`px-2.5 py-2 ${j === 0 ? "text-stone-800" : "text-right tabular-nums text-stone-700"}`}>
+                {cell}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** ตัวเลขพร้อมแถบส้มสัดส่วนเทียบค่าสูงสุดในตาราง */
+function Bar({ value, max }: { value: number; max: number }) {
+  const pct = Math.max(4, Math.round((value / Math.max(1, max)) * 100));
+  return (
+    <span className="inline-flex items-center justify-end gap-2">
+      <span className="h-1.5 w-16 overflow-hidden rounded-full bg-brand-100" aria-hidden>
+        <span className="block h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
+      </span>
+      <span className="w-6 text-right font-semibold">{value}</span>
+    </span>
+  );
+}
+
+function OpenCount({ n }: { n: number }) {
+  return n > 0 ? <span className="inline-block min-w-7 rounded-full bg-brand-50 px-2 py-0.5 text-center text-xs font-semibold text-brand-700 ring-1 ring-brand-100">{n}</span> : <span className="text-stone-400">0</span>;
+}
+
+function Urgent({ n }: { n: number }) {
+  return n > 0 ? <span className="inline-block min-w-7 rounded-full bg-rose-50 px-2 py-0.5 text-center text-xs font-semibold text-rose-700 ring-1 ring-rose-100">{n}</span> : <span className="text-stone-400">0</span>;
 }
