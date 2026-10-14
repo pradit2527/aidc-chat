@@ -23,8 +23,10 @@ d(`ระบบที่ติดตั้งแล้ว: ${URL ?? "(ไม่�
     expect((await c.get("/admin")).text).toContain("IT Helpdesk");
   });
 
-  test("QR บนหน้าแรกชี้ไป /chat ของโฮสต์นี้", async () => {
-    expect((await c.get("/")).text).toContain(`${URL}/chat`);
+  test("QR บนหน้าแรกชี้ไปหน้าหลักพนักงาน /start ของโฮสต์นี้ และ /start, /report เปิดได้", async () => {
+    expect((await c.get("/")).text).toContain(`${URL}/start`);
+    expect((await c.get("/start")).status).toBe(200);
+    expect((await c.get("/report")).status).toBe(200);
   });
 
   test("API คอนโซลยังปิดสำหรับคนที่ไม่ล็อกอิน และสถิติเด้งไปหน้าล็อกอิน", async () => {

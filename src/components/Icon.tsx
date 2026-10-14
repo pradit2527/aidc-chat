@@ -1,7 +1,7 @@
 import type { IconName } from "@/lib/categories";
 
 // ไอคอนเส้นสไตล์ lucide — ไม่เพิ่ม dependency
-type ExtraIcon = "chat" | "alert" | "user" | "chevron" | "bell" | "bellOff" | "send" | "back" | "check" | "search" | "lock" | "logout" | "zap" | "clip";
+type ExtraIcon = "chat" | "alert" | "user" | "chevron" | "bell" | "bellOff" | "send" | "back" | "check" | "search" | "lock" | "logout" | "zap" | "clip" | "list" | "plus" | "trash" | "clipboard";
 
 const PATHS: Record<IconName | ExtraIcon, React.ReactNode> = {
   bell: (
@@ -112,6 +112,36 @@ const PATHS: Record<IconName | ExtraIcon, React.ReactNode> = {
     <>
       <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
+    </>
+  ),
+  list: (
+    <>
+      <path d="M8 6h13" />
+      <path d="M8 12h13" />
+      <path d="M8 18h13" />
+      <path d="M3 6h.01" />
+      <path d="M3 12h.01" />
+      <path d="M3 18h.01" />
+    </>
+  ),
+  plus: (
+    <>
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </>
+  ),
+  clipboard: (
+    <>
+      <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <path d="m9 14 2 2 4-4" />
     </>
   ),
   chevron: <path d="m6 9 6 6 6-6" />,

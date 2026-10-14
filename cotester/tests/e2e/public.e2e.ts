@@ -33,10 +33,15 @@ describe("GET /api/health", () => {
 });
 
 describe("หน้าเว็บสาธารณะ", () => {
-  test("/ = โปสเตอร์ QR ชี้ไป /chat", async () => {
+  test("/ = โปสเตอร์ QR ชี้ไปหน้าหลักพนักงาน /start", async () => {
     const r = await c.get("/");
     expect(r.status).toBe(200);
-    expect(r.text).toContain("/chat");
+    expect(r.text).toMatch(/https?:\/\/[^"<]+\/start/); // บน localhost โปสเตอร์ใช้ IP ของเครื่องแทน
+  });
+
+  test("/start และ /report เปิดได้ (ภาษาลาว)", async () => {
+    expect((await c.get("/start")).text).toContain("ເລືອກບໍລິການ");
+    expect((await c.get("/report")).text).toContain("ແຈ້ງບັນຫາ");
   });
 
   test("/?tools=1 เปิดเครื่องมือพิมพ์ได้", async () => {

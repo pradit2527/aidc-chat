@@ -20,7 +20,8 @@ export default function QrPoster({ initialLang, publicUrl, showTools = false }: 
 }
 
 /** path ของหน้าพนักงาน — QR ต้องพาไปหน้านี้เท่านั้น (ตัด path/query อื่นทิ้ง ไม่ให้หลุดไป /admin) */
-export const STAFF_PATH = "/chat";
+/** ปลายทางของ QR = หน้าหลักพนักงาน (เลือกแชท/แจ้งปัญหา) */
+export const STAFF_PATH = "/start";
 
 function staffUrl(input: string): string | null {
   try {

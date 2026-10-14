@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CATEGORIES, DEPARTMENTS, categoryLabel } from "@/lib/categories";
 import { LANGS, type MsgKey } from "@/lib/i18n";
@@ -101,6 +102,14 @@ function Portal({ baseUrl, websiteToken }: Omit<Props, "initialLang">) {
         <div className="relative z-10 mx-auto max-w-5xl px-4 pb-12 pt-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
+              <Link
+                href="/start"
+                aria-label={t("hubBack")}
+                title={t("hubBack")}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 ring-1 ring-white/20 transition hover:bg-white/20"
+              >
+                <Icon name="back" className="h-4 w-4" />
+              </Link>
               <CosiLogo className="h-10" />
               <div className="leading-tight">
                 <div className="text-sm font-semibold">{t("brand")}</div>
@@ -289,7 +298,7 @@ function Portal({ baseUrl, websiteToken }: Omit<Props, "initialLang">) {
   );
 }
 
-function ProfileForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => void }) {
+export function ProfileForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => void }) {
   const { t, lang } = useI18n();
   const [name, setName] = useState("");
   const [department, setDepartment] = useState("");

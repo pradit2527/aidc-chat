@@ -2,6 +2,7 @@
 // ข้อความแชทไม่ได้เก็บที่นี่ (ยังอยู่ใน Chatwoot) — เก็บเฉพาะข้อมูลสำหรับติดตาม/รายงาน
 import type { ConversationDTO } from "./adminTypes";
 import { URGENT_LABEL } from "./categories";
+import type { PoolClient } from "@neondatabase/serverless";
 import { db, dbEnabled, q } from "./db";
 import { formatTicket, ticketDate } from "./tickets";
 
@@ -70,25 +71,35 @@ export async function ticketNoOf(c: ConversationDTO): Promise<string | null> {
   return (await registerTickets([c])).get(c.id) ?? null;
 }
 
+/** ล็อกการออกเลขของวันนั้น (ต้องอยู่ใน transaction) — ใช้ร่วมกันระหว่างเคสแชทและงานแจ้งปัญหา */
+export async function lockTicketDay(client: PoolClient, day: string): Promise<void> {
+  await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`ticket-day:${day}`]);
+}
+
+/** เลขลำดับถัดไปของวัน (001, 002, …) — เลขชุดเดียวทั้งเคสแชทและงานแจ้งปัญหา; เรียกหลัง lockTicketDay */
+export async function nextTicketSeq(client: PoolClient, day: string): Promise<number> {
+  const r = await client.query(
+    `INSERT INTO ticket_counters (day, seq) VALUES ($1, 1)
+     ON CONFLICT (day) DO UPDATE SET seq = ticket_counters.seq + 1
+     RETURNING seq`,
+    [day],
+  );
+  return Number(r.rows[0].seq);
+}
+
 /** ออกเลขตั๋วใหม่แบบ atomic: ล็อกต่อวันด้วย advisory lock → เพิ่มตัวนับ → บันทึกเคส + เหตุการณ์ created */
 async function allocate(c: ConversationDTO): Promise<string> {
   const day = ticketDate(c.createdAt);
   const client = await db().connect();
   try {
     await client.query("BEGIN");
-    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`ticket-day:${day}`]);
+    await lockTicketDay(client, day);
     const ex = await client.query("SELECT ticket_no FROM tickets WHERE conversation_id = $1", [c.id]);
     if (ex.rows[0]) {
       await client.query("COMMIT");
       return String(ex.rows[0].ticket_no);
     }
-    const seqRes = await client.query(
-      `INSERT INTO ticket_counters (day, seq) VALUES ($1, 1)
-       ON CONFLICT (day) DO UPDATE SET seq = ticket_counters.seq + 1
-       RETURNING seq`,
-      [day],
-    );
-    const seq = Number(seqRes.rows[0].seq);
+    const seq = await nextTicketSeq(client, day);
     const no = formatTicket(day, seq);
     await client.query(
       `INSERT INTO tickets (conversation_id, ticket_no, ticket_day, seq, contact_name, department, labels, closed_topics,

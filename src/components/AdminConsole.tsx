@@ -19,6 +19,7 @@ import { AidcLogo } from "./AidcLogo";
 import CloseCaseDialog, { type TopicItem } from "./CloseCaseDialog";
 import { useI18n } from "./I18n";
 import { Icon } from "./Icon";
+import { ReportsLink } from "./ReportsLink";
 
 type Tab = "open" | "resolved" | "all";
 type Props = { user: AdminUser; onSignedOut: () => void; demo?: boolean };
@@ -555,6 +556,7 @@ export default function AdminConsole({ user, onSignedOut, demo = false }: Props)
             >
               <Icon name={sound ? "bell" : "bellOff"} className="h-4 w-4" />
             </button>
+            <ReportsLink label={t("admReports")} />
             <a
               href="/admin/stats"
               title={t("admStats")}
