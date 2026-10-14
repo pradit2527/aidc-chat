@@ -165,9 +165,11 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                   rows={stats.perAgent.map((r) => ({
                     key: r.agent,
                     cells: [
-                      <span key="a" className="flex items-center gap-2">
+                      <span key="a" className="flex min-w-0 items-center gap-2">
                         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-deep-700 text-xs font-bold text-white">{initialOf(r.agent)}</span>
-                        <span className="truncate">{r.agent}</span>
+                        <span className="truncate" title={r.agent}>
+                          {r.agent}
+                        </span>
                       </span>,
                       <Bar key="t" value={r.total} max={maxAgent} />,
                       <OpenCount key="o" n={r.open} />,
@@ -247,7 +249,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
 /** กล่องตารางสีขาว หัวข้อพร้อมไอคอนส้ม */
 function Panel({ title, icon, count, children }: { title: string; icon: "list" | "user" | "chat"; count?: number; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-deep-800">
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand-600">
           <Icon name={icon} className="h-4 w-4" />
@@ -267,7 +269,10 @@ function DataTable({ head, rows, empty }: { head: string[]; rows: { key: string;
       <thead>
         <tr className="bg-brand-50 text-[11px] font-semibold uppercase tracking-wide text-brand-800">
           {head.map((h, i) => (
-            <th key={h} className={`px-2.5 py-2 ${i === 0 ? "rounded-l-xl text-left" : "text-right"} ${i === head.length - 1 ? "rounded-r-xl" : ""}`}>
+            <th
+              key={h}
+              className={`whitespace-nowrap px-2 py-2 ${i === 0 ? "w-full rounded-l-xl text-left" : "text-right"} ${i === head.length - 1 ? "rounded-r-xl" : ""}`}
+            >
               {h}
             </th>
           ))}
@@ -283,11 +288,18 @@ function DataTable({ head, rows, empty }: { head: string[]; rows: { key: string;
         )}
         {rows.map((r) => (
           <tr key={r.key} className="border-b border-stone-100 transition last:border-0 odd:bg-white even:bg-stone-50/60 hover:bg-brand-50/40">
-            {r.cells.map((cell, j) => (
-              <td key={j} className={`px-2.5 py-2 ${j === 0 ? "text-stone-800" : "text-right tabular-nums text-stone-700"}`}>
-                {cell}
-              </td>
-            ))}
+            {r.cells.map((cell, j) =>
+              j === 0 ? (
+                // max-w-0 + truncate: คอลัมน์แรกยืดเต็มที่เหลือและตัดด้วย … แทนที่จะดันตารางล้นการ์ด
+                <td key={j} className="max-w-0 px-2 py-2 text-stone-800">
+                  <span className="block truncate">{cell}</span>
+                </td>
+              ) : (
+                <td key={j} className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-stone-700">
+                  {cell}
+                </td>
+              ),
+            )}
           </tr>
         ))}
       </tbody>
@@ -300,18 +312,18 @@ function Bar({ value, max }: { value: number; max: number }) {
   const pct = Math.max(4, Math.round((value / Math.max(1, max)) * 100));
   return (
     <span className="inline-flex items-center justify-end gap-2">
-      <span className="h-1.5 w-16 overflow-hidden rounded-full bg-brand-100" aria-hidden>
+      <span className="hidden h-1.5 w-10 overflow-hidden rounded-full bg-brand-100 sm:inline-block" aria-hidden>
         <span className="block h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
       </span>
-      <span className="w-6 text-right font-semibold">{value}</span>
+      <span className="min-w-5 text-right font-semibold">{value}</span>
     </span>
   );
 }
 
 function OpenCount({ n }: { n: number }) {
-  return n > 0 ? <span className="inline-block min-w-7 rounded-full bg-brand-50 px-2 py-0.5 text-center text-xs font-semibold text-brand-700 ring-1 ring-brand-100">{n}</span> : <span className="text-stone-400">0</span>;
+  return n > 0 ? <span className="inline-block min-w-6 rounded-full bg-brand-50 px-1.5 py-0.5 text-center text-xs font-semibold text-brand-700 ring-1 ring-brand-100">{n}</span> : <span className="text-stone-400">0</span>;
 }
 
 function Urgent({ n }: { n: number }) {
-  return n > 0 ? <span className="inline-block min-w-7 rounded-full bg-rose-50 px-2 py-0.5 text-center text-xs font-semibold text-rose-700 ring-1 ring-rose-100">{n}</span> : <span className="text-stone-400">0</span>;
+  return n > 0 ? <span className="inline-block min-w-6 rounded-full bg-rose-50 px-1.5 py-0.5 text-center text-xs font-semibold text-rose-700 ring-1 ring-rose-100">{n}</span> : <span className="text-stone-400">0</span>;
 }
