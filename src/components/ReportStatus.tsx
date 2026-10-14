@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { fmtTime, labelName } from "@/lib/adminClient";
 import { DEPARTMENTS } from "@/lib/categories";
@@ -58,8 +59,11 @@ function StatusView({ no }: { no: string }) {
         {state.kind === "loading" ? (
           <section className="card p-6 text-sm text-stone-500">{t("rsLoading")}</section>
         ) : state.kind === "notfound" ? (
-          <section role="alert" className="card p-6 text-sm text-rose-700">
-            {t("rsNotFound")}
+          <section role="alert" className="card space-y-4 p-6 text-sm text-rose-700">
+            <p>{t("rsNotFound")}</p>
+            <Link href="/start" className="inline-block rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-600/25 hover:brightness-110">
+              {t("hubBack")}
+            </Link>
           </section>
         ) : (
           <Report r={state.report} stepLabel={stepLabel} onRefresh={load} lang={lang} />
@@ -148,9 +152,14 @@ function Report({ r, stepLabel, onRefresh, lang }: { r: View; stepLabel: (s: Sta
         </p>
       )}
 
-      <button type="button" onClick={onRefresh} className="rounded-full bg-deep-50 px-4 py-2 text-sm font-semibold text-deep-800 ring-1 ring-deep-100 hover:bg-deep-100">
-        {t("rsRefresh")}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={onRefresh} className="rounded-full bg-deep-50 px-4 py-2 text-sm font-semibold text-deep-800 ring-1 ring-deep-100 hover:bg-deep-100">
+          {t("rsRefresh")}
+        </button>
+        <Link href="/start" className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-600/25 hover:brightness-110">
+          {t("hubBack")}
+        </Link>
+      </div>
     </section>
   );
 }
