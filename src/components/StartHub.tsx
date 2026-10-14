@@ -26,7 +26,7 @@ function Hub() {
   const { t } = useI18n();
   return (
     <div className="min-h-screen">
-      <StaffHeader title={t("hubTitle")} subtitle={t("hubSub")} />
+      <StaffHeader title={t("hubTitle")} subtitle={t("hubSub")} steps={[t("hubChat"), t("hubReport")]} />
       <main className="relative z-10 mx-auto -mt-8 grid max-w-5xl gap-4 px-4 pb-10">
         <div className="grid gap-4 sm:grid-cols-2">
           <Choice href="/chat" n={1} icon="chat" title={t("hubChat")} hint={t("hubChatHint")} cta={t("hubGo")} />

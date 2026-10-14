@@ -175,7 +175,7 @@ function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
 
   return (
     <div className="min-h-screen">
-      <StaffHeader title={t("rpTitle")} subtitle={t("rpSub")} backHref="/start" />
+      <StaffHeader title={t("rpTitle")} subtitle={t("rpSub")} backHref="/start" steps={[t("heroStep1"), t("heroStep2"), t("rpSend")]} />
       <main className="relative z-10 mx-auto -mt-8 grid max-w-5xl gap-4 px-4 pb-10">
         {result ? (
           <section className="card space-y-5 p-6 text-center">

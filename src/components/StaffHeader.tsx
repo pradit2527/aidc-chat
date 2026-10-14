@@ -11,7 +11,18 @@ import { Icon } from "./Icon";
  * ส่วนหัวของหน้าพนักงาน (หน้าหลัก / แจ้งปัญหา / สถานะ) — เค้าโครงเดียวกับหน้าแชท:
  * โลโก้ COSI + สลับภาษา + ปุ่มกลับ, หัวข้อขีดส้ม, รูปตึก COSI กรอบส้มด้านขวา และเอฟเฟกต์แสงวิ่งด้านหลัง
  */
-export function StaffHeader({ title, subtitle, backHref }: { title: string; subtitle?: string; backHref?: string }) {
+export function StaffHeader({
+  title,
+  subtitle,
+  backHref,
+  steps,
+}: {
+  title: string;
+  subtitle?: string;
+  backHref?: string;
+  /** ขั้นตอนสั้น ๆ แสดงเป็นเม็ดเลข 1,2,3 ใต้คำอธิบาย (เหมือนหน้าแชท) */
+  steps?: string[];
+}) {
   const { t, lang, setLang } = useI18n();
   return (
     <header className="hero hero-fx text-white">
@@ -62,8 +73,18 @@ export function StaffHeader({ title, subtitle, backHref }: { title: string; subt
             <h1 className="text-2xl font-bold leading-snug sm:text-3xl">{title}</h1>
             <span aria-hidden className="mt-2.5 block h-1 w-12 rounded-full bg-brand-500" />
             {subtitle && <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/90 sm:text-base">{subtitle}</p>}
+            {steps && steps.length > 0 && (
+              <ol className="mt-4 flex flex-wrap gap-2">
+                {steps.map((label, i) => (
+                  <li key={label} className="flex items-center gap-2 rounded-full bg-white/10 py-1 pl-1 pr-3.5 text-sm text-white ring-1 ring-white/20">
+                    <span className="grid h-6 w-6 place-items-center rounded-full bg-brand-500 text-xs font-bold">{i + 1}</span>
+                    {label}
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
-          <figure className="relative mb-2 mr-2 hidden md:block">
+          <figure className="relative mb-2 mr-2">
             {/* บล็อกส้มแดงซ้อนหลัง — เลียนแบบแผงสีบนอาคาร */}
             <span aria-hidden className="absolute inset-0 translate-x-2 translate-y-2 rounded-3xl bg-brand-500" />
             <Image
@@ -72,8 +93,8 @@ export function StaffHeader({ title, subtitle, backHref }: { title: string; subt
               width={442}
               height={510}
               priority
-              sizes="208px"
-              className="relative aspect-[5/4] w-full rounded-3xl object-cover object-[50%_40%] shadow-2xl shadow-black/30 ring-1 ring-white/25"
+              sizes="(min-width: 768px) 208px, 100vw"
+              className="relative aspect-[16/9] w-full rounded-3xl object-cover object-[50%_40%] shadow-2xl shadow-black/30 ring-1 ring-white/25 md:aspect-[5/6]"
             />
           </figure>
         </div>
