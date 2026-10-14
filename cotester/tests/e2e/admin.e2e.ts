@@ -176,8 +176,8 @@ describe("5. ปิดหัวข้อ / ปิดเคส (Modal ปิด�
     expect(r.json).toEqual({ closedTopics: ["cosi-computer", "cosi-other"], resolved: true });
     const ms = await messages(19);
     const publicLast = [...ms].reverse().find((m) => !m.private)!;
-    expect(publicLast.content).toContain(ticket);
-    expect(publicLast.content).toContain("ຖືກປິດແລ້ວ");
+    expect(publicLast.content).toContain(`ເຄສ ${ticket} : Lao Development Bank ຖືກປິດແລ້ວ`); // เลขตั๋ว + ชื่อผู้แจ้ง
+    expect(publicLast.content).toContain(`Case ${ticket} : Lao Development Bank is now closed`);
     expect(ms.some((m) => m.private && m.content === "แก้ไขแล้ว")).toBe(true);
     expect((await list("open")).map((x) => x.id)).not.toContain(19);
     expect((await list("all")).find((x) => x.id === 19)).toMatchObject({ status: "resolved", closedTopics: ["cosi-computer", "cosi-other"] });

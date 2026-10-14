@@ -14,16 +14,21 @@ export function closeNoticeText(opts: {
   remaining: string[];
   resolved: boolean;
   ticket?: string | null;
+  /** ชื่อผู้แจ้งปัญหา — แสดงต่อท้ายเลขตั๋ว เช่น "ເຄສ Ticket13-10-2026-002 : ວິພາຣັດ ວັນນະຍຸກ ຖືກປິດແລ້ວ" */
+  name?: string | null;
 }): string {
   const { closed, remaining, resolved, ticket } = opts;
-  const tag = ticket ? ` ${ticket}` : "";
+  const name = (opts.name ?? "").trim();
+  const who = name && name !== "—" ? ` : ${name}` : "";
   if (resolved) {
+    const loHead = (ticket ? `ເຄສ ${ticket}` : "ເຄສນີ້") + who;
+    const enHead = (ticket ? `Case ${ticket}` : "Case") + who;
     const lo = [
-      `✅ ເຄສ${tag || "ນີ້"} ຖືກປິດແລ້ວ${closed.length ? ` — ແກ້ໄຂແລ້ວ: ${names(closed, "lo")}` : ""}`,
+      `✅ ${loHead} ຖືກປິດແລ້ວ${closed.length ? ` — ແກ້ໄຂແລ້ວ: ${names(closed, "lo")}` : ""}`,
       "ຂອບໃຈທີ່ແຈ້ງ ຖ້າຍັງມີບັນຫາອີກ ພິມຂໍ້ຄວາມໃໝ່ໄດ້ທຸກເວລາ.",
     ].join("\n");
     const en = [
-      `✅ Case${tag || " "}${tag ? " is" : "is"} now closed${closed.length ? ` — resolved: ${names(closed, "en")}` : ""}.`,
+      `✅ ${enHead} is now closed${closed.length ? ` — resolved: ${names(closed, "en")}` : ""}.`,
       "Thank you! If the problem comes back, just send a new message at any time.",
     ].join("\n");
     return `${lo}\n\n${en}`;

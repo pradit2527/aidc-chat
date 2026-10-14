@@ -65,7 +65,7 @@ export async function POST(req: Request, { params }: Ctx) {
       if (resolved || newlyClosed.length > 0) {
         await cw(s, acct(`/conversations/${id}/messages`), {
           json: {
-            content: closeNoticeText({ closed: resolved ? closedList : newlyClosed, remaining, resolved, ticket }),
+            content: closeNoticeText({ closed: resolved ? closedList : newlyClosed, remaining, resolved, ticket, name: conv.name }),
             message_type: "outgoing",
             private: false,
           },
