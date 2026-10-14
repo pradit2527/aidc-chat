@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { fmtTime } from "@/lib/adminClient";
 import type { Lang } from "@/lib/i18n";
 import { emptyMyReports, readMyReports, subscribeMyReports } from "@/lib/myReports";
 import { getProfile, subscribeProfile } from "@/lib/profileStore";
 import type { OwnerReportRow, ReportStatus } from "@/lib/reports";
+import { useLive } from "@/lib/useLive";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
 import { StaffHeader } from "./StaffHeader";
@@ -57,10 +58,7 @@ function MyReports() {
     }
   }, [who, page]);
 
-  useEffect(() => {
-    const id = window.setTimeout(() => void load(), 0);
-    return () => clearTimeout(id);
-  }, [load]);
+  useLive(load, 10_000);
 
   const statusText = (s: ReportStatus) => (s === "new" ? t("rsStatusNew") : s === "in_progress" ? t("rsStatusProgress") : t("rsStatusDone"));
   const statusCls = (s: ReportStatus) =>

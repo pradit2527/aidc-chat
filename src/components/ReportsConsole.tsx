@@ -6,6 +6,7 @@ import type { AdminUser, AgentDTO } from "@/lib/adminTypes";
 import { DEPARTMENTS } from "@/lib/categories";
 import type { Lang } from "@/lib/i18n";
 import type { ReportDTO, ReportStatus } from "@/lib/reports";
+import { useLive } from "@/lib/useLive";
 import { AdminHeader } from "./AdminHeader";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
@@ -43,14 +44,7 @@ function Console({ user, initialReportId }: { user: AdminUser; initialReportId: 
     }
   }, [tab]);
 
-  useEffect(() => {
-    const first = window.setTimeout(() => void load(), 0);
-    const id = setInterval(() => void load(), 10_000);
-    return () => {
-      clearTimeout(first);
-      clearInterval(id);
-    };
-  }, [load]);
+  useLive(load, 5_000);
 
   useEffect(() => {
     api<{ agents: AgentDTO[] }>("/api/admin/canned")

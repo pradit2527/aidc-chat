@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { fmtTime, labelName } from "@/lib/adminClient";
 import { DEPARTMENTS } from "@/lib/categories";
 import type { Lang } from "@/lib/i18n";
 import { getProfile } from "@/lib/profileStore";
 import type { ReportDTO, ReportStatus as Status } from "@/lib/reports";
+import { useLive } from "@/lib/useLive";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
 import { ReportFiles } from "./ReportFiles";
@@ -40,16 +41,7 @@ function StatusView({ no }: { no: string }) {
     }
   }, [no]);
 
-  useEffect(() => {
-    const id = window.setTimeout(() => void load(), 0);
-    return () => clearTimeout(id);
-  }, [load]);
-  useEffect(() => {
-    if (state.kind === "ok" && state.report.status !== "done") {
-      const id = setInterval(load, 20_000);
-      return () => clearInterval(id);
-    }
-  }, [state, load]);
+  useLive(load, 10_000);
 
   const stepLabel = (s: Status) => (s === "new" ? t("rsStatusNew") : s === "in_progress" ? t("rsStatusProgress") : t("rsStatusDone"));
 

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { api, fmtTime, initialOf, labelName } from "@/lib/adminClient";
 import type { AdminUser, ConversationDTO } from "@/lib/adminTypes";
 import { DEPARTMENTS } from "@/lib/categories";
 import type { ReportDTO } from "@/lib/reports";
+import { useLive } from "@/lib/useLive";
 import { AdminHeader } from "./AdminHeader";
 import { useI18n } from "./I18n";
 import { Icon } from "./Icon";
@@ -39,14 +40,7 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
     }
   }, []);
 
-  useEffect(() => {
-    const first = window.setTimeout(() => void load(), 0);
-    const id = setInterval(() => void load(), 10_000);
-    return () => {
-      clearTimeout(first);
-      clearInterval(id);
-    };
-  }, [load]);
+  useLive(load, 5_000);
 
   const waiting = chats?.filter((c) => c.unread > 0).length ?? 0;
   const newReports = reports?.enabled ? reports.summary.new : 0;

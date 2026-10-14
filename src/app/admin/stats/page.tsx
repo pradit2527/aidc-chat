@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { AdminHeaderStandalone } from "@/components/AdminHeader";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import type { AdminUser } from "@/lib/adminTypes";
 import { initialOf, labelName } from "@/lib/adminClient";
 import { dbEnabled } from "@/lib/db";
@@ -87,6 +88,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
               <Icon name="list" className="h-4 w-4" />
             </span>
             {t("stRange")} · {t("stDays", { n: days })}
+            <AutoRefresh intervalMs={15_000} label={t("liveLabel")} />
           </span>
           <span className="flex flex-wrap items-center gap-1.5">
             {RANGES.map((d) => (

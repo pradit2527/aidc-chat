@@ -1,24 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { api } from "@/lib/adminClient";
+import { useLive } from "@/lib/useLive";
 
-/** ปุ่ม "ງານແຈ້ງ" ที่หัวคอนโซลแชท — โพลล์จำนวนงานใหม่ทุก 30 วินาที แสดงเป็นตัวเลขแดง */
+/** ปุ่ม "ງານແຈ້ງ" ที่หัวคอนโซลแชท — โพลล์จำนวนงานใหม่ทุก 10 วินาที (และเมื่อกลับมาที่แท็บ) แสดงเป็นตัวเลขแดง */
 export function ReportsLink({ label }: { label: string }) {
   const [count, setCount] = useState(0);
-  useEffect(() => {
-    let live = true;
-    const load = () =>
+  const load = useCallback(
+    () =>
       api<{ enabled: boolean; summary: { new: number } }>("/api/admin/reports?summary=1")
-        .then((r) => live && setCount(r.enabled ? r.summary.new : 0))
-        .catch(() => {});
-    load();
-    const id = setInterval(load, 30_000);
-    return () => {
-      live = false;
-      clearInterval(id);
-    };
-  }, []);
+        .then((r) => setCount(r.enabled ? r.summary.new : 0))
+        .catch(() => {}),
+    [],
+  );
+  useLive(load, 10_000);
   return (
     <a
       href="/admin/reports"
