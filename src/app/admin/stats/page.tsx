@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { labelName } from "@/lib/adminClient";
+import { SignOutButton } from "@/components/SignOutButton";
 import { dbEnabled } from "@/lib/db";
 import { DEFAULT_LANG, isLang, LANG_COOKIE, translate, type Lang, type MsgKey } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
@@ -74,6 +75,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
             <a href="/admin" className="ml-2 rounded-full bg-brand-600 px-3 py-1 font-semibold transition hover:bg-brand-700">
               {t("stBack")}
             </a>
+            <SignOutButton label={t("admSignOut")} className="ml-1" />
           </nav>
         </div>
       </header>

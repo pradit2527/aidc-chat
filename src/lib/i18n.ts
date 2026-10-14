@@ -316,6 +316,20 @@ const M = {
   hubPage: { lo: "ໜ້າ {page}/{pages} · ທັງໝົດ {total}", en: "Page {page}/{pages} · {total} total" },
   hubPrev: { lo: "ກ່ອນໜ້າ", en: "Previous" },
   hubNext: { lo: "ຖັດໄປ", en: "Next" },
+  // ---- หน้าหลักทีมไอที (/admin หลังล็อกอิน) ----
+  ahTitle: { lo: "ເລືອກໜ້າຈໍ", en: "Choose a console" },
+  ahSub: { lo: "ສະບາຍດີ {name} — ເລືອກລະບົບແຊັດ ຫຼື ງານແຈ້ງບັນຫາ, ຫຼືກົດລາຍການທີ່ຄ້າງຢູ່ດ້ານລຸ່ມໄດ້ເລີຍ", en: "Hello {name} — open the chat or reports console, or jump straight into a pending item below" },
+  ahChat: { lo: "ລະບົບແຊັດ", en: "Chat console" },
+  ahChatHint: { lo: "ຕອບແຊັດພະນັກງານ, ປິດເຄສ, ມອບໝາຍ", en: "Reply to staff chats, close cases, assign" },
+  ahReports: { lo: "ແຈ້ງບັນຫາ", en: "Reported issues" },
+  ahReportsHint: { lo: "ຮັບງານ, ຕິ໊ກຂໍ້ທີ່ແກ້ແລ້ວ, ປິດງານ", en: "Take reports, tick fixed items, close" },
+  ahWaiting: { lo: "ລໍຖ້າຕອບ", en: "waiting" },
+  ahOpenChats: { lo: "ແຊັດທີ່ຍັງເປີດຢູ່", en: "Open chats" },
+  ahOpenReports: { lo: "ງານແຈ້ງທີ່ຍັງບໍ່ສຳເລັດ", en: "Pending reports" },
+  ahEmptyChats: { lo: "ບໍ່ມີແຊັດຄ້າງ", en: "No open chats" },
+  ahEmptyReports: { lo: "ບໍ່ມີງານຄ້າງ", en: "No pending reports" },
+  ahViewAll: { lo: "ເບິ່ງທັງໝົດ", en: "View all" },
+  admHome: { lo: "ໜ້າຫຼັກ", en: "Home" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type MsgKey = keyof typeof M;

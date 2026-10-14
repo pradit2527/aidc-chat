@@ -13,8 +13,10 @@ export const metadata: Metadata = {
 };
 
 /** หน้ามอนิเตอร์งานแจ้งปัญหาของทีมไอที — ต้องล็อกอินคอนโซลก่อน (ไม่มีเซสชันจะเด้งไป /admin) */
-export default async function AdminReportsPage() {
-  const saved = (await cookies()).get(LANG_COOKIE)?.value;
+export default async function AdminReportsPage({ searchParams }: { searchParams: Promise<{ r?: string }> }) {
+  const [{ r }, jar] = await Promise.all([searchParams, cookies()]);
+  const saved = jar.get(LANG_COOKIE)?.value;
+  const initialReportId = /^\d{1,12}$/.test(r ?? "") ? Number(r) : null;
   let session = null;
   try {
     session = await getSession();
@@ -22,5 +24,5 @@ export default async function AdminReportsPage() {
     session = null;
   }
   if (!session) redirect("/admin");
-  return <ReportsConsole user={session.user} initialLang={isLang(saved) ? saved : DEFAULT_LANG} />;
+  return <ReportsConsole user={session.user} initialLang={isLang(saved) ? saved : DEFAULT_LANG} initialReportId={initialReportId} />;
 }

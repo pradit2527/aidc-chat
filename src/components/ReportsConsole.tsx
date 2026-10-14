@@ -10,27 +10,29 @@ import { AidcLogo } from "./AidcLogo";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
 import { ReportFiles } from "./ReportFiles";
+import { SignOutButton } from "./SignOutButton";
 
 type Tab = ReportStatus | "all";
 type ListRes = { enabled: boolean; status: Tab; summary: { new: number; inProgress: number; done: number }; reports: ReportDTO[] };
 
 /** หน้ามอนิเตอร์งานแจ้งปัญหาของทีมไอที: รับงาน → ติ๊กข้อที่แก้แล้ว → ปิดงาน */
-export default function ReportsConsole({ user, initialLang }: { user: AdminUser; initialLang: Lang }) {
+export default function ReportsConsole({ user, initialLang, initialReportId = null }: { user: AdminUser; initialLang: Lang; initialReportId?: number | null }) {
   return (
     <I18nProvider initial={initialLang}>
-      <Console user={user} />
+      <Console user={user} initialReportId={initialReportId} />
     </I18nProvider>
   );
 }
 
 const TABS: Tab[] = ["new", "in_progress", "done", "all"];
 
-function Console({ user }: { user: AdminUser }) {
+function Console({ user, initialReportId }: { user: AdminUser; initialReportId: number | null }) {
   const { t, lang, setLang } = useI18n();
-  const [tab, setTab] = useState<Tab>("new");
+  // เปิดจากลิงก์ (?r=) → ใช้แท็บ "ทั้งหมด" เพื่อให้เจองานนั้นแน่นอน
+  const [tab, setTab] = useState<Tab>(initialReportId ? "all" : "new");
   const [data, setData] = useState<ListRes | null>(null);
   const [error, setError] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(initialReportId);
   const [agents, setAgents] = useState<AgentDTO[]>([]);
 
   const load = useCallback(async () => {
@@ -85,8 +87,14 @@ function Console({ user }: { user: AdminUser }) {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <a href="/admin" className="hidden h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 hover:bg-white/20 sm:grid">
-              {t("rcBack")}
+            <a href="/admin" title={t("admHome")} className="grid h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 hover:bg-white/20">
+              <span className="flex items-center gap-1">
+                <Icon name="back" className="h-3.5 w-3.5" />
+                {t("admHome")}
+              </span>
+            </a>
+            <a href="/admin/chat" className="hidden h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 hover:bg-white/20 sm:grid">
+              {t("ahChat")}
             </a>
             <div className="flex rounded-full bg-white/15 p-0.5 ring-1 ring-white/25" role="group" aria-label="Language">
               {LANGS.map((l) => (
@@ -101,7 +109,8 @@ function Console({ user }: { user: AdminUser }) {
                 </button>
               ))}
             </div>
-            <span className="hidden text-sm text-white/90 md:block">{user.name}</span>
+            <span className="hidden max-w-[10rem] truncate text-sm text-white/90 md:block">{user.name}</span>
+            <SignOutButton label={t("admSignOut")} />
           </div>
         </div>
       </header>

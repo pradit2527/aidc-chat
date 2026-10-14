@@ -5,20 +5,30 @@ import type { AdminUser } from "@/lib/adminTypes";
 import { api, ApiError } from "@/lib/adminClient";
 import { LANGS, type MsgKey } from "@/lib/i18n";
 import AdminConsole from "./AdminConsole";
+import AdminHub from "./AdminHub";
 import { AidcLogo } from "./AidcLogo";
 import { I18nProvider, useI18n } from "./I18n";
 
-type Props = { initialLang: "lo" | "en"; user: AdminUser | null; configured: boolean; demo?: boolean };
+type Props = {
+  initialLang: "lo" | "en";
+  user: AdminUser | null;
+  configured: boolean;
+  demo?: boolean;
+  /** hub = หน้าหลักทีมไอที (เลือกแชท/แจ้งปัญหา + รายการค้าง), chat = คอนโซลตอบแชท */
+  view?: "hub" | "chat";
+  /** เปิดเคสนี้ทันทีเมื่อเข้าคอนโซลแชท (ลิงก์จากหน้าหลัก) */
+  initialConversationId?: number | null;
+};
 
-export default function AdminApp({ initialLang, user, configured, demo }: Props) {
+export default function AdminApp({ initialLang, user, configured, demo, view = "hub", initialConversationId = null }: Props) {
   return (
     <I18nProvider initial={initialLang}>
-      <Gate user={user} configured={configured} demo={demo} />
+      <Gate user={user} configured={configured} demo={demo} view={view} initialConversationId={initialConversationId} />
     </I18nProvider>
   );
 }
 
-function Gate({ user: initial, configured, demo }: Omit<Props, "initialLang">) {
+function Gate({ user: initial, configured, demo, view, initialConversationId }: Omit<Props, "initialLang">) {
   const { t } = useI18n();
   const [user, setUser] = useState<AdminUser | null>(initial);
 
@@ -32,7 +42,8 @@ function Gate({ user: initial, configured, demo }: Omit<Props, "initialLang">) {
     );
   }
   if (!user) return <Login onDone={setUser} />;
-  return <AdminConsole user={user} onSignedOut={() => setUser(null)} demo={demo} />;
+  if (view === "hub" && !demo) return <AdminHub user={user} onSignedOut={() => setUser(null)} />;
+  return <AdminConsole user={user} onSignedOut={() => setUser(null)} demo={demo} initialConversationId={initialConversationId ?? null} />;
 }
 
 function Login({ onDone }: { onDone: (u: AdminUser) => void }) {

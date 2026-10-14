@@ -257,7 +257,7 @@ function Poster({ publicUrl, showTools }: { publicUrl: string; showTools: boolea
         >
           {t("qrGoStaff")}
         </a>
-        <a href="/admin/reports" className="inline-flex h-10 items-center px-3 text-stone-500 hover:text-deep-700 hover:underline">
+        <a href="/admin" className="inline-flex h-10 items-center px-3 text-stone-500 hover:text-deep-700 hover:underline">
           {t("qrGoAdmin")}
         </a>
       </nav>

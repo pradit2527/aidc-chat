@@ -69,6 +69,18 @@ describe("1. ล็อกอิน", () => {
     expect(c.cookie("cosi_admin")).toBeTruthy();
     expect((await c.get("/api/admin/me")).json).toEqual({ user: { id: 1, name: AGENT, email: MOCK_LOGIN.email } });
   });
+  test("หลังล็อกอิน /admin = หน้าหลักทีมไอที (เลือกแชท/แจ้งปัญหา), /admin/chat = คอนโซลแชท, ?c= เปิดเคสได้", async () => {
+    const hub = await c.get("/admin");
+    expect(hub.status).toBe(200);
+    expect(hub.text).toContain("ເລືອກໜ້າຈໍ");
+    expect(hub.text).toContain('href="/admin/chat"');
+    expect(hub.text).toContain('href="/admin/reports"');
+    expect(hub.text).not.toMatch(/type="password"/);
+    const chat = await c.get("/admin/chat?c=19");
+    expect(chat.status).toBe(200);
+    expect(chat.text).toContain("Ticket Support");
+    expect(chat.text).toContain('href="/admin"'); // ปุ่มกลับหน้าหลัก
+  });
 });
 
 describe("2. รายการเคสและเลขตั๋วถาวร", () => {

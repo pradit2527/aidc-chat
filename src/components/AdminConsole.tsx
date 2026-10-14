@@ -22,7 +22,7 @@ import { Icon } from "./Icon";
 import { ReportsLink } from "./ReportsLink";
 
 type Tab = "open" | "resolved" | "all";
-type Props = { user: AdminUser; onSignedOut: () => void; demo?: boolean };
+type Props = { user: AdminUser; onSignedOut: () => void; demo?: boolean; /** เปิดเคสนี้ทันที (ลิงก์จากหน้าหลักทีมไอที) */ initialConversationId?: number | null };
 
 const PAGE_SIZE = 25;
 
@@ -139,7 +139,7 @@ const STATUS_KEY: Record<ConvStatus, MsgKey> = {
 
 // ---------- คอนโซล ----------
 
-export default function AdminConsole({ user, onSignedOut, demo = false }: Props) {
+export default function AdminConsole({ user, onSignedOut, demo = false, initialConversationId = null }: Props) {
   const { t, lang, setLang } = useI18n();
   const call = demo ? (demoApi as typeof api) : api;
 
@@ -299,6 +299,17 @@ export default function AdminConsole({ user, onSignedOut, demo = false }: Props)
     }, 0);
     return () => window.clearTimeout(id);
   }, [call, refreshOpen, refreshLabels]);
+
+  // เปิดจากลิงก์ /admin/chat?c=<id>: สลับไปแท็บ "ทั้งหมด" (เผื่อเคสปิดแล้ว) แล้วเลือกเคสนั้น
+  useEffect(() => {
+    if (!initialConversationId) return;
+    const id = window.setTimeout(() => {
+      changeTab("all");
+      selectConversation(initialConversationId);
+    }, 0);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ทำครั้งเดียวตอนเปิดหน้า
+  }, [initialConversationId]);
 
   useInterval(() => void refreshOpen(), 5000);
   useInterval(() => void refreshLabels(), 10000);
@@ -556,6 +567,16 @@ export default function AdminConsole({ user, onSignedOut, demo = false }: Props)
             >
               <Icon name={sound ? "bell" : "bellOff"} className="h-4 w-4" />
             </button>
+            <a
+              href="/admin"
+              title={t("admHome")}
+              className="grid h-9 place-items-center rounded-full bg-white/10 px-2.5 text-xs font-bold ring-1 ring-white/20 transition hover:bg-white/20"
+            >
+              <span className="flex items-center gap-1">
+                <Icon name="back" className="h-3.5 w-3.5" />
+                {t("admHome")}
+              </span>
+            </a>
             <ReportsLink label={t("admReports")} />
             <a
               href="/admin/stats"
