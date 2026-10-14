@@ -22,8 +22,11 @@ const RANGES = [7, 14, 30, 90];
 const fmtAt = (sec: number | null) => (sec ? `${ticketDate(sec)} ${laoTime(sec)}` : "—");
 
 /** หน้าสถิติจากทะเบียน Ticket ใน Neon — โทนขาว/ส้ม เรียบ อ่านง่าย (ต้องล็อกอินคอนโซลก่อน) */
-export default async function StatsPage({ searchParams }: { searchParams: Promise<{ days?: string; page?: string }> }) {
-  const [{ days: daysParam, page: pageParam }, jar] = await Promise.all([searchParams, cookies()]);
+type View = "cards" | "table";
+
+export default async function StatsPage({ searchParams }: { searchParams: Promise<{ days?: string; page?: string; view?: string }> }) {
+  const [{ days: daysParam, page: pageParam, view: viewParam }, jar] = await Promise.all([searchParams, cookies()]);
+  const view: View = viewParam === "table" ? "table" : "cards";
   const saved = jar.get(LANG_COOKIE)?.value;
   const lang: Lang = isLang(saved) ? saved : DEFAULT_LANG;
   const t = (k: MsgKey, vars?: Record<string, string | number>) => translate(lang, k, vars);
@@ -89,7 +92,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
             {RANGES.map((d) => (
               <a
                 key={d}
-                href={`/admin/stats?days=${d}`}
+                href={`/admin/stats?days=${d}&view=${view}`}
                 aria-current={d === days ? "page" : undefined}
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                   d === days ? "bg-brand-600 text-white shadow-md shadow-brand-600/25" : "bg-brand-50 text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100"
@@ -169,10 +172,89 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
             </div>
 
             {/* Ticket ล่าสุด — การ์ด grid หน้าละ 30 */}
-            <Panel title={t("stRecent")} icon="chat" count={stats.recentTotal}>
+            <Panel
+              title={t("stRecent")}
+              icon="chat"
+              count={stats.recentTotal}
+              actions={
+                <span className="flex rounded-full bg-brand-50 p-0.5 ring-1 ring-brand-100" role="group" aria-label="view">
+                  {(
+                    [
+                      ["cards", "grid", t("stViewCards")],
+                      ["table", "list", t("stViewTable")],
+                    ] as [View, "grid" | "list", string][]
+                  ).map(([v, icon, label]) => (
+                    <a
+                      key={v}
+                      href={`/admin/stats?days=${days}&page=${stats.recentPage}&view=${v}`}
+                      aria-current={view === v ? "true" : undefined}
+                      title={label}
+                      className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                        view === v ? "bg-brand-600 text-white shadow-sm" : "text-brand-700 hover:bg-brand-100"
+                      }`}
+                    >
+                      <Icon name={icon} className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">{label}</span>
+                    </a>
+                  ))}
+                </span>
+              }
+            >
               <p className="-mt-2 mb-3 text-xs text-stone-500">{t("stRecentHint")}</p>
               {stats.recent.length === 0 ? (
                 <p className="py-8 text-center text-sm text-stone-400">{t("stEmpty")}</p>
+              ) : view === "table" ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[720px] text-sm">
+                    <thead>
+                      <tr className="bg-brand-50 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-800">
+                        {[t("stColTicket"), t("stColName"), t("stColLabel"), t("stColStatus"), t("stColAgent"), t("stColCreatedAt"), t("stColResolvedAt")].map((h, i) => (
+                          <th key={h} className={`whitespace-nowrap px-3 py-2.5 ${i === 0 ? "rounded-l-xl" : ""} ${i === 6 ? "rounded-r-xl" : ""}`}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stats.recent.map((r) => (
+                        <tr key={r.id} className="border-b border-stone-100 transition last:border-0 odd:bg-white even:bg-stone-50/60 hover:bg-brand-50/40">
+                          <td className="whitespace-nowrap px-3 py-2.5 font-semibold tabular-nums">
+                            <a href={`/admin/chat?c=${r.id}`} className="text-brand-700 hover:underline">
+                              {r.ticketNo}
+                            </a>
+                            {r.urgent && (
+                              <span className="ml-1.5 inline-flex items-center rounded-full bg-rose-50 px-1.5 text-[10px] font-bold text-rose-700 ring-1 ring-rose-100" title="urgent">
+                                !
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="flex items-center gap-2">
+                              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-deep-700 text-xs font-bold text-white">{initialOf(r.name)}</span>
+                              <span className="min-w-0">
+                                <span className="block truncate font-medium text-stone-800">{r.name}</span>
+                                {r.department && <span className="block truncate text-xs text-stone-500">{r.department}</span>}
+                              </span>
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="flex flex-wrap gap-1">
+                              {r.labels.map((l) => (
+                                <span key={l} className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-700 ring-1 ring-stone-200">
+                                  {labelName(l, lang)}
+                                </span>
+                              ))}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5">{statusChip(r.status)}</td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-xs text-stone-700">{r.assignee || "—"}</td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-stone-600">{fmtAt(r.createdAt)}</td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-stone-600">{fmtAt(r.resolvedAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
                 <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {stats.recent.map((r) => (
@@ -235,9 +317,9 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
               )}
               {stats.recentPages > 1 && (
                 <nav className="mt-4 flex items-center justify-between gap-2 text-sm" aria-label="pagination">
-                  <PageLink days={days} page={stats.recentPage - 1} disabled={stats.recentPage <= 1} label={t("hubPrev")} dir="prev" />
+                  <PageLink days={days} view={view} page={stats.recentPage - 1} disabled={stats.recentPage <= 1} label={t("hubPrev")} dir="prev" />
                   <span className="text-xs text-stone-500">{t("hubPage", { page: stats.recentPage, pages: stats.recentPages, total: stats.recentTotal })}</span>
-                  <PageLink days={days} page={stats.recentPage + 1} disabled={stats.recentPage >= stats.recentPages} label={t("hubNext")} dir="next" />
+                  <PageLink days={days} view={view} page={stats.recentPage + 1} disabled={stats.recentPage >= stats.recentPages} label={t("hubNext")} dir="next" />
                 </nav>
               )}
             </Panel>
@@ -249,7 +331,19 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
 }
 
 /** กล่องตารางสีขาว หัวข้อพร้อมไอคอนส้ม */
-function Panel({ title, icon, count, children }: { title: string; icon: "list" | "user" | "chat"; count?: number; children: React.ReactNode }) {
+function Panel({
+  title,
+  icon,
+  count,
+  actions,
+  children,
+}: {
+  title: string;
+  icon: "list" | "user" | "chat";
+  count?: number;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="min-w-0 overflow-hidden rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-deep-800">
@@ -258,6 +352,7 @@ function Panel({ title, icon, count, children }: { title: string; icon: "list" |
         </span>
         {title}
         {count !== undefined && <span className="text-xs font-normal text-stone-400">({count})</span>}
+        {actions && <span className="ml-auto flex items-center gap-1">{actions}</span>}
       </h2>
       {children}
     </section>
@@ -331,7 +426,21 @@ function Urgent({ n }: { n: number }) {
 }
 
 /** ปุ่มก่อนหน้า/ถัดไปของรายการ Ticket (คงช่วงวันไว้ใน URL) */
-function PageLink({ days, page, disabled, label, dir }: { days: number; page: number; disabled: boolean; label: string; dir: "prev" | "next" }) {
+function PageLink({
+  days,
+  view,
+  page,
+  disabled,
+  label,
+  dir,
+}: {
+  days: number;
+  view: View;
+  page: number;
+  disabled: boolean;
+  label: string;
+  dir: "prev" | "next";
+}) {
   const cls = "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition";
   if (disabled) {
     return (
@@ -343,7 +452,7 @@ function PageLink({ days, page, disabled, label, dir }: { days: number; page: nu
     );
   }
   return (
-    <a href={`/admin/stats?days=${days}&page=${page}`} className={`${cls} bg-brand-50 text-brand-700 ring-brand-100 hover:bg-brand-100`}>
+    <a href={`/admin/stats?days=${days}&page=${page}&view=${view}`} className={`${cls} bg-brand-50 text-brand-700 ring-brand-100 hover:bg-brand-100`}>
       {dir === "prev" && <Icon name="chevron" className="h-3.5 w-3.5 rotate-90" />}
       {label}
       {dir === "next" && <Icon name="chevron" className="h-3.5 w-3.5 -rotate-90" />}

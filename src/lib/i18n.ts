@@ -334,6 +334,8 @@ const M = {
   stRange: { lo: "ຊ່ວງເວລາ", en: "Range" },
   stOpenCase: { lo: "ເປີດເຄສ", en: "Open case" },
   stRecentHint: { lo: "ເລືອກຊ່ວງເວລາດ້ານເທິງ · ກົດບັດເພື່ອເປີດເຄສໃນຄອນໂຊນແຊັດ", en: "Pick a range above · click a card to open the case in the chat console" },
+  stViewCards: { lo: "ບັດ", en: "Cards" },
+  stViewTable: { lo: "ຕາຕະລາງ", en: "Table" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type MsgKey = keyof typeof M;
