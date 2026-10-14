@@ -28,12 +28,18 @@ export type Stats = {
     createdAt: number;
     resolvedAt: number | null;
   }[];
+  /** การแบ่งหน้าของ recent (หน้าละ 30) */
+  recentTotal: number;
+  recentPage: number;
+  recentPages: number;
 };
 
 type S = Record<string, string | null>;
 const num = (v: string | null | undefined) => (v === null || v === undefined || v === "" ? null : Number(v));
 
-export async function getStats(days = 14): Promise<Stats> {
+export const RECENT_PER_PAGE = 30;
+
+export async function getStats(days = 14, recentPage = 1): Promise<Stats> {
   const today = ticketDate(Math.floor(Date.now() / 1000));
   const [summary] = await q<S>(
     `SELECT count(*) FILTER (WHERE status = 'open')::int::text AS open_now,
@@ -69,11 +75,15 @@ export async function getStats(days = 14): Promise<Stats> {
       GROUP BY assignee_name ORDER BY count(*) DESC`,
     [days],
   );
+  const recentTotal = num(summary?.total) ?? 0;
+  const recentPages = Math.max(1, Math.ceil(recentTotal / RECENT_PER_PAGE));
+  const page = Math.min(Math.max(1, recentPage), recentPages);
   const recent = await q<Record<string, unknown>>(
     `SELECT conversation_id::text AS id, ticket_no, contact_name, department, labels, status, urgent, assignee_name,
             extract(epoch from created_at)::bigint::text AS created,
             extract(epoch from resolved_at)::bigint::text AS resolved
-       FROM tickets ORDER BY created_at DESC LIMIT 50`,
+       FROM tickets ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+    [RECENT_PER_PAGE, (page - 1) * RECENT_PER_PAGE],
   );
   return {
     days,
@@ -110,5 +120,8 @@ export async function getStats(days = 14): Promise<Stats> {
       createdAt: Number(r.created) || 0,
       resolvedAt: r.resolved === null || r.resolved === undefined ? null : Number(r.resolved),
     })),
+    recentTotal,
+    recentPage: page,
+    recentPages,
   };
 }

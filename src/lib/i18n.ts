@@ -227,7 +227,7 @@ const M = {
   stColCreatedAt: { lo: "ເວລາແຈ້ງ", en: "Created at" },
   stColResolvedAt: { lo: "ເວລາປິດ", en: "Resolved at" },
   // ---- หน้าหลักพนักงาน (/start): เลือกแชท หรือ แจ้งปัญหา ----
-  hubTitle: { lo: "ເລືອກບໍລິການ", en: "Choose a service" },
+  hubTitle: { lo: "ລະບົບການແຈ້ງບັນຫາ", en: "Problem Reporting System" },
   hubSub: { lo: "ຕ້ອງການຕິດຕໍ່ທີມໄອທີແບບໃດ? ເລືອກໄດ້ເລີຍ", en: "How would you like to reach the IT team?" },
   hubChat: { lo: "ລະບົບແຊັດ", en: "Chat with IT" },
   hubChatHint: { lo: "ສົນທະນາກັບທີມໄອທີທັນທີ ເໝາະກັບບັນຫາທີ່ຕ້ອງການຄຳຕອບດຽວນີ້", en: "Talk to IT right away — best for questions that need an answer now" },
@@ -332,6 +332,8 @@ const M = {
   admHome: { lo: "ໜ້າຫຼັກ", en: "Home" },
   stDays: { lo: "{n} ມື້", en: "{n} days" },
   stRange: { lo: "ຊ່ວງເວລາ", en: "Range" },
+  stOpenCase: { lo: "ເປີດເຄສ", en: "Open case" },
+  stRecentHint: { lo: "ເລືອກຊ່ວງເວລາດ້ານເທິງ · ກົດບັດເພື່ອເປີດເຄສໃນຄອນໂຊນແຊັດ", en: "Pick a range above · click a card to open the case in the chat console" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type MsgKey = keyof typeof M;

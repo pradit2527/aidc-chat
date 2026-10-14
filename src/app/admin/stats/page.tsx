@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Icon } from "@/components/Icon";
-import { SignOutButton } from "@/components/SignOutButton";
+import { AdminHeaderStandalone } from "@/components/AdminHeader";
+import type { AdminUser } from "@/lib/adminTypes";
 import { initialOf, labelName } from "@/lib/adminClient";
 import { dbEnabled } from "@/lib/db";
 import { DEFAULT_LANG, isLang, LANG_COOKIE, translate, type Lang, type MsgKey } from "@/lib/i18n";
@@ -21,22 +22,23 @@ const RANGES = [7, 14, 30, 90];
 const fmtAt = (sec: number | null) => (sec ? `${ticketDate(sec)} ${laoTime(sec)}` : "—");
 
 /** หน้าสถิติจากทะเบียน Ticket ใน Neon — โทนขาว/ส้ม เรียบ อ่านง่าย (ต้องล็อกอินคอนโซลก่อน) */
-export default async function StatsPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  const [{ days: daysParam }, jar] = await Promise.all([searchParams, cookies()]);
+export default async function StatsPage({ searchParams }: { searchParams: Promise<{ days?: string; page?: string }> }) {
+  const [{ days: daysParam, page: pageParam }, jar] = await Promise.all([searchParams, cookies()]);
   const saved = jar.get(LANG_COOKIE)?.value;
   const lang: Lang = isLang(saved) ? saved : DEFAULT_LANG;
   const t = (k: MsgKey, vars?: Record<string, string | number>) => translate(lang, k, vars);
 
-  let authed = false;
+  let user: AdminUser | null = null;
   try {
-    authed = (await getSession()) !== null;
+    user = (await getSession())?.user ?? null;
   } catch {
-    authed = false;
+    user = null;
   }
-  if (!authed) redirect("/admin");
+  if (!user) redirect("/admin");
 
   const days = Math.max(1, Math.min(365, Number(daysParam) || 14));
-  const stats: Stats | null = dbEnabled ? await getStats(days) : null;
+  const page = Math.max(1, Number(pageParam) || 1);
+  const stats: Stats | null = dbEnabled ? await getStats(days, page) : null;
 
   const minutes = (n: number | null) => {
     if (n === null) return "—";
@@ -72,21 +74,18 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="min-h-screen bg-canvas">
-      {/* ส่วนหัว: ขาว เส้นส้มด้านล่าง */}
-      <header className="border-b-2 border-brand-500 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-600 text-white shadow-md shadow-brand-600/25">
-              <Icon name="list" className="h-5 w-5" />
+      <AdminHeaderStandalone initialLang={lang} user={user} title={t("stTitle")} subtitle={t("stRecentHint")} />
+
+      <main className="relative z-10 mx-auto -mt-8 max-w-6xl space-y-6 px-4 pb-10">
+        {/* แถบเลือกช่วงเวลา (การ์ดขาวซ้อนขอบส่วนหัว) */}
+        <nav className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm" aria-label={t("stRange")}>
+          <span className="flex items-center gap-2 text-sm font-semibold text-deep-800">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand-600">
+              <Icon name="list" className="h-4 w-4" />
             </span>
-            <div className="leading-tight">
-              <h1 className="text-lg font-bold text-deep-800">{t("stTitle")}</h1>
-              <p className="text-xs text-stone-500">
-                {t("admBrand")} · {t("stDays", { n: days })}
-              </p>
-            </div>
-          </div>
-          <nav className="flex flex-wrap items-center gap-1.5" aria-label={t("stRange")}>
+            {t("stRange")} · {t("stDays", { n: days })}
+          </span>
+          <span className="flex flex-wrap items-center gap-1.5">
             {RANGES.map((d) => (
               <a
                 key={d}
@@ -99,19 +98,8 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                 {t("stDays", { n: d })}
               </a>
             ))}
-            <a
-              href="/admin"
-              className="ml-2 inline-flex items-center gap-1 rounded-full bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700 ring-1 ring-stone-200 transition hover:bg-stone-200"
-            >
-              <Icon name="back" className="h-3.5 w-3.5" />
-              {t("admHome")}
-            </a>
-            <SignOutButton label={t("admSignOut")} variant="light" />
-          </nav>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+          </span>
+        </nav>
         {!stats ? (
           <p role="alert" className="rounded-2xl border border-rose-100 bg-rose-50 p-5 text-sm text-rose-700">
             {t("stNoDb")}
@@ -180,64 +168,78 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
               </Panel>
             </div>
 
-            {/* Ticket ล่าสุด */}
-            <Panel title={t("stRecent")} icon="chat" count={stats.recent.length}>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-sm">
-                  <thead>
-                    <tr className="bg-brand-50 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-800">
-                      {[t("stColTicket"), t("stColName"), t("stColLabel"), t("stColStatus"), t("stColAgent"), t("stColCreatedAt"), t("stColResolvedAt")].map((h, i) => (
-                        <th key={h} className={`px-3 py-2.5 ${i === 0 ? "rounded-l-xl" : ""} ${i === 6 ? "rounded-r-xl" : ""}`}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.recent.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-stone-400">
-                          {t("stEmpty")}
-                        </td>
-                      </tr>
-                    )}
-                    {stats.recent.map((r) => (
-                      <tr key={r.id} className="border-b border-stone-100 transition last:border-0 odd:bg-white even:bg-stone-50/60 hover:bg-brand-50/40">
-                        <td className="whitespace-nowrap px-3 py-2.5 font-semibold tabular-nums text-brand-700">
-                          {r.ticketNo}
-                          {r.urgent && (
-                            <span className="ml-1.5 inline-flex items-center rounded-full bg-rose-50 px-1.5 text-[10px] font-bold text-rose-700 ring-1 ring-rose-100" title="urgent">
-                              !
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span className="flex items-center gap-2">
-                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-deep-700 text-xs font-bold text-white">{initialOf(r.name)}</span>
-                            <span className="min-w-0">
-                              <span className="block truncate font-medium text-stone-800">{r.name}</span>
-                              {r.department && <span className="block truncate text-xs text-stone-500">{r.department}</span>}
-                            </span>
+            {/* Ticket ล่าสุด — การ์ด grid หน้าละ 30 */}
+            <Panel title={t("stRecent")} icon="chat" count={stats.recentTotal}>
+              <p className="-mt-2 mb-3 text-xs text-stone-500">{t("stRecentHint")}</p>
+              {stats.recent.length === 0 ? (
+                <p className="py-8 text-center text-sm text-stone-400">{t("stEmpty")}</p>
+              ) : (
+                <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {stats.recent.map((r) => (
+                    <li key={r.id}>
+                      <a
+                        href={`/admin/chat?c=${r.id}`}
+                        className={`group flex h-full flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lg hover:shadow-brand-600/10 ${
+                          r.status === "resolved" ? "border-stone-200" : "border-brand-200 bg-gradient-to-br from-brand-50/60 to-white"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-bold tabular-nums text-brand-700">{r.ticketNo}</span>
+                            <span className="block text-[11px] tabular-nums text-stone-500">{fmtAt(r.createdAt)}</span>
                           </span>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span className="flex flex-wrap gap-1">
+                          <span className="flex shrink-0 items-center gap-1">
+                            {r.urgent && (
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-rose-100">
+                                <Icon name="alert" className="h-3 w-3" />
+                                {t("admUrgent")}
+                              </span>
+                            )}
+                            {statusChip(r.status)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-deep-700 text-sm font-bold text-white">{initialOf(r.name)}</span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-semibold text-stone-800">{r.name}</span>
+                            <span className="block truncate text-xs text-stone-500">{r.department || "—"}</span>
+                          </span>
+                        </div>
+                        {r.labels.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
                             {r.labels.map((l) => (
                               <span key={l} className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] text-stone-700 ring-1 ring-stone-200">
                                 {labelName(l, lang)}
                               </span>
                             ))}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2.5">{statusChip(r.status)}</td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-xs text-stone-700">{r.assignee || "—"}</td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-stone-600">{fmtAt(r.createdAt)}</td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-stone-600">{fmtAt(r.resolvedAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          </div>
+                        )}
+                        <dl className="mt-auto grid grid-cols-2 gap-2 border-t border-stone-100 pt-3 text-xs">
+                          <div className="min-w-0">
+                            <dt className="text-stone-400">{t("stColAgent")}</dt>
+                            <dd className="truncate font-medium text-stone-700">{r.assignee || "—"}</dd>
+                          </div>
+                          <div className="min-w-0 text-right">
+                            <dt className="text-stone-400">{t("stColResolvedAt")}</dt>
+                            <dd className="truncate font-medium tabular-nums text-stone-700">{r.resolvedAt ? fmtAt(r.resolvedAt) : "—"}</dd>
+                          </div>
+                        </dl>
+                        <span className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-brand-700 opacity-0 transition group-hover:opacity-100">
+                          {t("stOpenCase")}
+                          <Icon name="chevron" className="h-3.5 w-3.5 -rotate-90" />
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {stats.recentPages > 1 && (
+                <nav className="mt-4 flex items-center justify-between gap-2 text-sm" aria-label="pagination">
+                  <PageLink days={days} page={stats.recentPage - 1} disabled={stats.recentPage <= 1} label={t("hubPrev")} dir="prev" />
+                  <span className="text-xs text-stone-500">{t("hubPage", { page: stats.recentPage, pages: stats.recentPages, total: stats.recentTotal })}</span>
+                  <PageLink days={days} page={stats.recentPage + 1} disabled={stats.recentPage >= stats.recentPages} label={t("hubNext")} dir="next" />
+                </nav>
+              )}
             </Panel>
           </>
         )}
@@ -326,4 +328,25 @@ function OpenCount({ n }: { n: number }) {
 
 function Urgent({ n }: { n: number }) {
   return n > 0 ? <span className="inline-block min-w-6 rounded-full bg-rose-50 px-1.5 py-0.5 text-center text-xs font-semibold text-rose-700 ring-1 ring-rose-100">{n}</span> : <span className="text-stone-400">0</span>;
+}
+
+/** ปุ่มก่อนหน้า/ถัดไปของรายการ Ticket (คงช่วงวันไว้ใน URL) */
+function PageLink({ days, page, disabled, label, dir }: { days: number; page: number; disabled: boolean; label: string; dir: "prev" | "next" }) {
+  const cls = "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition";
+  if (disabled) {
+    return (
+      <span className={`${cls} cursor-not-allowed bg-stone-50 text-stone-300 ring-stone-100`} aria-disabled>
+        {dir === "prev" && <Icon name="chevron" className="h-3.5 w-3.5 rotate-90" />}
+        {label}
+        {dir === "next" && <Icon name="chevron" className="h-3.5 w-3.5 -rotate-90" />}
+      </span>
+    );
+  }
+  return (
+    <a href={`/admin/stats?days=${days}&page=${page}`} className={`${cls} bg-brand-50 text-brand-700 ring-brand-100 hover:bg-brand-100`}>
+      {dir === "prev" && <Icon name="chevron" className="h-3.5 w-3.5 rotate-90" />}
+      {label}
+      {dir === "next" && <Icon name="chevron" className="h-3.5 w-3.5 -rotate-90" />}
+    </a>
+  );
 }

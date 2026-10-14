@@ -40,7 +40,7 @@ describe("หน้าเว็บสาธารณะ", () => {
   });
 
   test("/start และ /report เปิดได้ (ภาษาลาว)", async () => {
-    expect((await c.get("/start")).text).toContain("ເລືອກບໍລິການ");
+    expect((await c.get("/start")).text).toContain("ລະບົບການແຈ້ງບັນຫາ");
     expect((await c.get("/report")).text).toContain("ແຈ້ງບັນຫາ");
   });
 

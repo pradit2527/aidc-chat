@@ -4,13 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, fmtTime, initialOf, labelName } from "@/lib/adminClient";
 import type { AdminUser, AgentDTO } from "@/lib/adminTypes";
 import { DEPARTMENTS } from "@/lib/categories";
-import { LANGS, type Lang } from "@/lib/i18n";
+import type { Lang } from "@/lib/i18n";
 import type { ReportDTO, ReportStatus } from "@/lib/reports";
-import { AidcLogo } from "./AidcLogo";
+import { AdminHeader } from "./AdminHeader";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
 import { ReportFiles } from "./ReportFiles";
-import { SignOutButton } from "./SignOutButton";
 
 type Tab = ReportStatus | "all";
 type ListRes = { enabled: boolean; status: Tab; summary: { new: number; inProgress: number; done: number }; reports: ReportDTO[] };
@@ -27,7 +26,7 @@ export default function ReportsConsole({ user, initialLang, initialReportId = nu
 const TABS: Tab[] = ["new", "in_progress", "done", "all"];
 
 function Console({ user, initialReportId }: { user: AdminUser; initialReportId: number | null }) {
-  const { t, lang, setLang } = useI18n();
+  const { t, lang } = useI18n();
   // เปิดจากลิงก์ (?r=) → ใช้แท็บ "ทั้งหมด" เพื่อให้เจองานนั้นแน่นอน
   const [tab, setTab] = useState<Tab>(initialReportId ? "all" : "new");
   const [data, setData] = useState<ListRes | null>(null);
@@ -77,43 +76,17 @@ function Console({ user, initialReportId }: { user: AdminUser; initialReportId: 
 
   return (
     <div className="flex h-dvh flex-col bg-canvas">
-      <header className="hero shrink-0 text-white">
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5">
-          <div className="flex min-w-0 items-center gap-3">
-            <AidcLogo className="h-11" />
-            <div className="min-w-0 leading-tight">
-              <div className="truncate text-sm font-semibold">{t("rcTitle")}</div>
-              <div className="hidden text-xs text-white/75 sm:block">{t("admBrand")}</div>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <a href="/admin" title={t("admHome")} className="grid h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 hover:bg-white/20">
-              <span className="flex items-center gap-1">
-                <Icon name="back" className="h-3.5 w-3.5" />
-                {t("admHome")}
-              </span>
-            </a>
-            <a href="/admin/chat" className="hidden h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 hover:bg-white/20 sm:grid">
+      <div className="shrink-0">
+        <AdminHeader
+          user={user}
+          barTitle={t("rcTitle")}
+          extra={
+            <a href="/admin/chat" className="hidden h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 transition hover:bg-white/20 sm:grid">
               {t("ahChat")}
             </a>
-            <div className="flex rounded-full bg-white/15 p-0.5 ring-1 ring-white/25" role="group" aria-label="Language">
-              {LANGS.map((l) => (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => setLang(l.id)}
-                  aria-pressed={lang === l.id}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold transition ${lang === l.id ? "bg-white text-deep-800" : "text-white/90 hover:bg-white/10"}`}
-                >
-                  {l.label}
-                </button>
-              ))}
-            </div>
-            <span className="hidden max-w-[10rem] truncate text-sm text-white/90 md:block">{user.name}</span>
-            <SignOutButton label={t("admSignOut")} />
-          </div>
-        </div>
-      </header>
+          }
+        />
+      </div>
 
       <div className="grid min-h-0 flex-1 md:grid-cols-[22rem_1fr]">
         {/* รายการ */}

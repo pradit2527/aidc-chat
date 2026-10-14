@@ -5,9 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { api, fmtTime, initialOf, labelName } from "@/lib/adminClient";
 import type { AdminUser, ConversationDTO } from "@/lib/adminTypes";
 import { DEPARTMENTS } from "@/lib/categories";
-import { LANGS } from "@/lib/i18n";
 import type { ReportDTO } from "@/lib/reports";
-import { AidcLogo } from "./AidcLogo";
+import { AdminHeader } from "./AdminHeader";
 import { useI18n } from "./I18n";
 import { Icon } from "./Icon";
 
@@ -19,7 +18,7 @@ const MAX_ROWS = 10;
  * กดรายการใดก็กระโดดเข้าหน้านั้นพร้อมเปิดเคส/งานนั้นทันที (/admin/chat?c=<id>, /admin/reports?r=<id>)
  */
 export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSignedOut: () => void }) {
-  const { t, lang, setLang } = useI18n();
+  const { t, lang } = useI18n();
   const [chats, setChats] = useState<ConversationDTO[] | null>(null);
   const [reports, setReports] = useState<ReportsRes | null>(null);
   const [error, setError] = useState(false);
@@ -49,15 +48,6 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
     };
   }, [load]);
 
-  async function signOut() {
-    try {
-      await api("/api/admin/logout", { json: {} });
-    } catch {
-      // ไม่เป็นไร คุกกี้อาจหมดอายุไปแล้ว
-    }
-    onSignedOut();
-  }
-
   const waiting = chats?.filter((c) => c.unread > 0).length ?? 0;
   const newReports = reports?.enabled ? reports.summary.new : 0;
   const pendingReports = reports?.enabled ? reports.summary.new + reports.summary.inProgress : 0;
@@ -65,53 +55,7 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
 
   return (
     <div className="min-h-screen">
-      <header className="hero text-white">
-        <div className="mx-auto max-w-6xl px-4 pb-10 pt-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <AidcLogo className="h-11" />
-              <div className="min-w-0 leading-tight">
-                <div className="truncate text-sm font-semibold">{t("admTitle")}</div>
-                <div className="text-xs text-white/75">{t("admBrand")}</div>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <a href="/admin/stats" className="hidden h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 hover:bg-white/20 sm:grid">
-                {t("admStats")}
-              </a>
-              <a href="/" target="_blank" rel="noreferrer" className="hidden h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 hover:bg-white/20 sm:grid">
-                QR
-              </a>
-              <div className="flex rounded-full bg-white/15 p-0.5 ring-1 ring-white/25" role="group" aria-label="Language">
-                {LANGS.map((l) => (
-                  <button
-                    key={l.id}
-                    type="button"
-                    onClick={() => setLang(l.id)}
-                    aria-pressed={lang === l.id}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${lang === l.id ? "bg-white text-deep-800" : "text-white/90 hover:bg-white/10"}`}
-                  >
-                    {l.label}
-                  </button>
-                ))}
-              </div>
-              <span className="hidden text-sm text-white/90 md:block">{user.name}</span>
-              <button
-                type="button"
-                onClick={signOut}
-                title={t("admSignOut")}
-                aria-label={t("admSignOut")}
-                className="grid h-9 w-9 place-items-center rounded-full bg-white/10 ring-1 ring-white/20 transition hover:bg-white/20"
-              >
-                <Icon name="logout" className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-          <h1 className="mt-5 text-2xl font-bold sm:text-3xl">{t("ahTitle")}</h1>
-          <span aria-hidden className="mt-2.5 block h-1 w-12 rounded-full bg-brand-500" />
-          <p className="mt-3 text-sm text-white/90">{t("ahSub", { name: user.name })}</p>
-        </div>
-      </header>
+      <AdminHeader user={user} title={t("ahTitle")} subtitle={t("ahSub", { name: user.name })} hideHome onSignedOut={onSignedOut} />
 
       <main className="relative z-10 mx-auto -mt-8 grid max-w-6xl gap-4 px-4 pb-10">
         {/* สองเมนูหลัก */}

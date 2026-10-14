@@ -46,7 +46,7 @@ describe("หน้าพนักงาน", () => {
   test("/start = หน้าหลักเลือกบริการ (แชท / แจ้งปัญหา) และ QR ที่ / ชี้ไป /start", async () => {
     const r = await staff.get("/start");
     expect(r.status).toBe(200);
-    expect(r.text).toContain("ເລືອກບໍລິການ");
+    expect(r.text).toContain("ລະບົບການແຈ້ງບັນຫາ");
     expect(r.text).toContain('href="/chat"');
     expect(r.text).toContain('href="/report"');
     expect((await staff.get("/")).text).toMatch(/https?:\/\/[^"<]+\/start/); // บน localhost โปสเตอร์ใช้ IP ของเครื่องแทน
