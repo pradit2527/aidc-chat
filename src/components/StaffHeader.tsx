@@ -1,17 +1,28 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { LANGS } from "@/lib/i18n";
 import { CosiLogo } from "./CosiLogo";
 import { useI18n } from "./I18n";
 import { Icon } from "./Icon";
 
-/** ส่วนหัวแบบกะทัดรัดของหน้าพนักงาน (หน้าหลัก / แจ้งปัญหา / สถานะ) — โลโก้ COSI + สลับภาษา + ปุ่มกลับ */
+/**
+ * ส่วนหัวของหน้าพนักงาน (หน้าหลัก / แจ้งปัญหา / สถานะ) — เค้าโครงเดียวกับหน้าแชท:
+ * โลโก้ COSI + สลับภาษา + ปุ่มกลับ, หัวข้อขีดส้ม, รูปตึก COSI กรอบส้มด้านขวา และเอฟเฟกต์แสงวิ่งด้านหลัง
+ */
 export function StaffHeader({ title, subtitle, backHref }: { title: string; subtitle?: string; backHref?: string }) {
   const { t, lang, setLang } = useI18n();
   return (
-    <header className="hero text-white">
-      <div className="mx-auto max-w-5xl px-4 pb-10 pt-4">
+    <header className="hero hero-fx text-white">
+      {/* แสงวิ่งด้านหลัง (ตกแต่งอย่างเดียว) */}
+      <div className="fx-layer" aria-hidden="true">
+        <span className="fx-orb fx-orb-a" />
+        <span className="fx-orb fx-orb-b" />
+        <span className="fx-sweep" />
+        <span className="fx-edge" />
+      </div>
+      <div className="relative z-10 mx-auto max-w-5xl px-4 pb-12 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             {backHref && (
@@ -46,9 +57,26 @@ export function StaffHeader({ title, subtitle, backHref }: { title: string; subt
             ))}
           </div>
         </div>
-        <h1 className="mt-5 text-2xl font-bold leading-snug sm:text-3xl">{title}</h1>
-        <span aria-hidden className="mt-2.5 block h-1 w-12 rounded-full bg-brand-500" />
-        {subtitle && <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/90 sm:text-base">{subtitle}</p>}
+        <div className="mt-5 grid items-center gap-5 md:grid-cols-[1fr_13rem] md:gap-8">
+          <div>
+            <h1 className="text-2xl font-bold leading-snug sm:text-3xl">{title}</h1>
+            <span aria-hidden className="mt-2.5 block h-1 w-12 rounded-full bg-brand-500" />
+            {subtitle && <p className="mt-3 max-w-xl text-sm leading-relaxed text-white/90 sm:text-base">{subtitle}</p>}
+          </div>
+          <figure className="relative mb-2 mr-2 hidden md:block">
+            {/* บล็อกส้มแดงซ้อนหลัง — เลียนแบบแผงสีบนอาคาร */}
+            <span aria-hidden className="absolute inset-0 translate-x-2 translate-y-2 rounded-3xl bg-brand-500" />
+            <Image
+              src="/cosi-hotel.jpg"
+              alt="COSI Hotel"
+              width={442}
+              height={510}
+              priority
+              sizes="208px"
+              className="relative aspect-[5/4] w-full rounded-3xl object-cover object-[50%_40%] shadow-2xl shadow-black/30 ring-1 ring-white/25"
+            />
+          </figure>
+        </div>
       </div>
     </header>
   );

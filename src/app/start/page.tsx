@@ -6,7 +6,7 @@ import { DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "COSI Hotel · ເລືອກບໍລິການ",
+  title: "COSI Hotel · ລະບົບການແຈ້ງບັນຫາ",
   description: "ເລືອກແຊັດກັບທີມໄອທີ ຫຼື ແຈ້ງບັນຫາ — COSI Hotel IT support",
 };
 
