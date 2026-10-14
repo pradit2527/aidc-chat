@@ -11,6 +11,20 @@ const q = (text: string, params: unknown[] = []) => sql.query(text, params) as P
 type Item = { id: number; topic: string; text: string; done: boolean; doneBy: string };
 type Report = { id: number; ticketNo: string; name: string; status: string; assignee: string; note?: string; urgent: boolean; items: Item[]; doneAt: number | null };
 
+
+/** PNG 1x1 (67 ไบต์) สำหรับทดสอบอัปโหลด */
+const PNG_1x1 = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
+async function upload(blob: Blob, name: string, who: string, origin = BASE) {
+  const body = new FormData();
+  body.append("file", blob, name);
+  body.append("who", who);
+  const res = await fetch(`${BASE}/api/reports/upload`, { method: "POST", body, headers: { origin } });
+  return { status: res.status, json: (await res.json().catch(() => null)) as Record<string, unknown> | null };
+}
+
 const staff = new Client();
 const admin = new Client();
 const MOCK_LOGIN = { email: "it.test@example.invalid", password: "mock-only-password" };
@@ -20,12 +34,12 @@ let ticketNo = "";
 let reportId = 0;
 
 beforeAll(async () => {
-  await q("TRUNCATE reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
+  await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
   const id = (await staff.post("/api/identify", { name: "Report Tester", department: "housekeeping", contact: "205" })).json as { identifier: string };
   identifier = id.identifier;
 });
 afterAll(async () => {
-  await q("TRUNCATE reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
+  await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
 });
 
 describe("หน้าพนักงาน", () => {
@@ -178,5 +192,86 @@ describe("คอนโซลไอที (/admin/reports)", () => {
     expect(done.summary).toEqual({ new: 1, inProgress: 0, done: 1 });
     const all = (await admin.get("/api/admin/reports?status=all")).json as { reports: Report[] };
     expect(all.reports).toHaveLength(2);
+  });
+});
+
+describe("ไฟล์แนบ (รูป/วิดีโอ)", () => {
+  let fileId = 0;
+  let token = "";
+  let withFileNo = "";
+  let withFileId = 0;
+
+  test("อัปโหลดรูป → 201 + id/token; ชนิดไม่รองรับ → 400; Origin แปลก → 403", async () => {
+    const r = await upload(new Blob([PNG_1x1], { type: "image/png" }), "ຮູບ ທົດສອບ.png", identifier);
+    expect(r.status).toBe(201);
+    expect(r.json).toMatchObject({ name: "ຮູບ ທົດສອບ.png", mime: "image/png", size: PNG_1x1.length, kind: "image" });
+    expect(String(r.json!.token)).toMatch(/^[0-9a-f]{32}$/);
+    fileId = Number(r.json!.id);
+    token = String(r.json!.token);
+    expect((await upload(new Blob(["hello"], { type: "text/plain" }), "a.txt", identifier)).json).toEqual({ error: "file_type" });
+    expect((await upload(new Blob([PNG_1x1], { type: "image/png" }), "a.png", identifier, "http://evil.test")).status).toBe(403);
+  });
+
+  test("ไฟล์ที่ยังไม่ผูกรายงาน: ผู้อัปโหลดดูได้ คนอื่น/ไม่ล็อกอิน → 404", async () => {
+    expect((await staff.get(`/api/reports/files/${fileId}?who=${identifier}`)).status).toBe(200);
+    expect((await staff.get(`/api/reports/files/${fileId}`)).status).toBe(404);
+    expect((await staff.get(`/api/reports/files/${fileId}?who=cosi_${"c".repeat(24)}`)).status).toBe(404);
+  });
+
+  test("ส่งรายงานพร้อมไฟล์ → ผูกไฟล์; token ผิดถูกข้าม; files เกิน 5 → 400", async () => {
+    const base = { name: "Report Tester", department: "housekeeping", identifier, topics: [{ topic: "cctv", items: ["ກ້ອງໜ້າລິບບໍ່ຕິດ"] }] };
+    const r = await staff.post("/api/reports", { ...base, files: [{ id: fileId, token }, { id: fileId, token: "0".repeat(32) }] });
+    expect(r.status).toBe(201);
+    withFileNo = (r.json as { ticketNo: string }).ticketNo;
+    withFileId = (r.json as { id: number }).id;
+    const mine = (await staff.get(`/api/reports/${withFileNo}?who=${identifier}`)).json as { report: { files: { id: number; kind: string; name: string }[] } };
+    expect(mine.report.files).toEqual([{ id: fileId, name: "ຮູບ ທົດສອບ.png", mime: "image/png", size: PNG_1x1.length, kind: "image" }]);
+    const tooMany = Array.from({ length: 6 }, (_, i) => ({ id: i + 1, token: "a".repeat(32) }));
+    expect((await staff.post("/api/reports", { ...base, files: tooMany })).json).toEqual({ error: "too_many_files" });
+    expect((await staff.post("/api/reports", { ...base, files: [{ id: "x", token: "y" }] })).json).toEqual({ error: "file_invalid" });
+  });
+
+  test("ไฟล์ที่ผูกแล้ว: เจ้าของดูได้, ไอทีที่ล็อกอินดูได้ (เนื้อหาตรง + Range 206), ไฟล์ซ้ำผูกรายงานอื่นไม่ได้", async () => {
+    const owner = await fetch(`${BASE}/api/reports/files/${fileId}?who=${identifier}`);
+    expect(owner.status).toBe(200);
+    expect(owner.headers.get("content-type")).toBe("image/png");
+    expect(Buffer.from(await owner.arrayBuffer()).equals(PNG_1x1)).toBe(true);
+    const adminRes = await admin.get(`/api/reports/files/${fileId}`);
+    expect(adminRes.status).toBe(200);
+    const range = await fetch(`${BASE}/api/reports/files/${fileId}?who=${identifier}`, { headers: { range: "bytes=0-9" } });
+    expect(range.status).toBe(206);
+    expect(range.headers.get("content-range")).toBe(`bytes 0-9/${PNG_1x1.length}`);
+    expect((await range.arrayBuffer()).byteLength).toBe(10);
+    const again = await staff.post("/api/reports", { name: "Report Tester", department: "housekeeping", identifier, topics: [{ topic: "other", items: ["x"] }], files: [{ id: fileId, token }] });
+    const dup = (await staff.get(`/api/reports/${(again.json as { ticketNo: string }).ticketNo}?who=${identifier}`)).json as { report: { files: unknown[] } };
+    expect(dup.report.files).toEqual([]);
+    const adminView = (await admin.get(`/api/admin/reports/${withFileId}`)).json as { report: { files: { id: number }[] } };
+    expect(adminView.report.files.map((f) => f.id)).toEqual([fileId]);
+  });
+});
+
+describe("รายงานของฉัน (GET /api/reports/mine) — หน้าละ 30", () => {
+  test("เห็นเฉพาะรายงานของ identifier ตัวเอง พร้อมสถานะ/ผู้รับเรื่อง/จำนวนข้อ เรียงล่าสุดก่อน", async () => {
+    const r = (await staff.get(`/api/reports/mine?who=${identifier}`)).json as {
+      enabled: boolean; total: number; page: number; pages: number; perPage: number;
+      reports: { ticketNo: string; status: string; assignee: string; itemsDone: number; itemsTotal: number }[];
+    };
+    expect(r.enabled).toBe(true);
+    expect(r.perPage).toBe(30);
+    expect(r.page).toBe(1);
+    expect(r.total).toBeGreaterThanOrEqual(3);
+    expect(r.reports.length).toBe(r.total);
+    // ล่าสุดก่อน: เลขตั๋วเรียงลดลง
+    const nos = r.reports.map((x) => x.ticketNo);
+    expect([...nos].sort().reverse()).toEqual(nos);
+    const first = r.reports.find((x) => x.ticketNo === ticketNo)!;
+    expect(first).toMatchObject({ status: "done", assignee: "Decha", itemsDone: 3, itemsTotal: 3 });
+    expect((await staff.get(`/api/reports/mine?who=cosi_${"d".repeat(24)}`)).json).toMatchObject({ total: 0, reports: [] });
+    expect((await staff.get(`/api/reports/mine?who=hacker`)).json).toMatchObject({ total: 0, reports: [] });
+  });
+  test("หน้าเกินช่วงถูกบีบให้อยู่ในช่วง", async () => {
+    const r = (await staff.get(`/api/reports/mine?who=${identifier}&page=99`)).json as { page: number; pages: number; reports: unknown[] };
+    expect(r.page).toBe(r.pages);
+    expect(r.reports.length).toBeGreaterThan(0);
   });
 });

@@ -64,4 +64,17 @@ export function loginAllowed(ip: string): boolean {
   return a.n <= 10;
 }
 
+/** จำกัดความถี่ทั่วไป (ในหน่วยความจำ): อนุญาต `max` ครั้งต่อ key ในช่วง `windowMs` */
+const buckets = new Map<string, { n: number; reset: number }>();
+export function rateLimit(key: string, max: number, windowMs = 5 * 60_000): boolean {
+  const now = Date.now();
+  const b = buckets.get(key);
+  if (!b || b.reset < now) {
+    buckets.set(key, { n: 1, reset: now + windowMs });
+    return true;
+  }
+  b.n += 1;
+  return b.n <= max;
+}
+
 export const parseId = (v: string) => (/^\d{1,12}$/.test(v) ? Number(v) : null);

@@ -50,10 +50,10 @@ function expectedTickets(all: Conv[]) {
 }
 
 beforeAll(async () => {
-  await q("TRUNCATE reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
+  await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
 });
 afterAll(async () => {
-  await q("TRUNCATE reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
+  await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
 });
 
 describe("1. ล็อกอิน", () => {

@@ -9,6 +9,8 @@ services:
       - "3400:3400"
     env_file:
       - .env.production
+    volumes:
+      - ./data:/app/data   # ไฟล์แนบ (รูป/วิดีโอ) อยู่นอกคอนเทนเนอร์ — ไม่หายตอน build ใหม่
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3400/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s

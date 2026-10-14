@@ -4,6 +4,7 @@ import { CATEGORIES, DEPARTMENTS } from "./categories";
 import { db, dbEnabled, q } from "./db";
 import { lockTicketDay, nextTicketSeq } from "./ticketRegistry";
 import { formatTicket, ticketDate } from "./tickets";
+import { fileKind, type ReportFileDTO } from "./uploadRules";
 
 export type ReportStatus = "new" | "in_progress" | "done";
 export const REPORT_STATUSES: ReportStatus[] = ["new", "in_progress", "done"];
@@ -33,6 +34,8 @@ export type ReportDTO = {
   doneAt: number | null;
   updatedAt: number;
   items: ReportItemDTO[];
+  /** ไฟล์แนบ (รูป/วิดีโอ) — ดาวน์โหลดผ่าน /api/reports/files/<id> */
+  files: ReportFileDTO[];
 };
 
 export type ReportInput = {
@@ -42,6 +45,8 @@ export type ReportInput = {
   identifier: string;
   urgent: boolean;
   topics: { topic: string; items: string[] }[];
+  /** ไฟล์ที่อัปโหลดไว้ก่อน (id + token จาก POST /api/reports/upload) */
+  files: { id: number; token: string }[];
 };
 
 export const REPORT_LIMITS = { topics: CATEGORIES.length, itemsPerTopic: 20, itemsTotal: 50, itemLength: 300 };
@@ -80,7 +85,16 @@ export function parseReportInput(body: unknown): { ok: true; value: ReportInput 
   const total = topics.reduce((n, t) => n + t.items.length, 0);
   if (total === 0) return { ok: false, error: "items_required" };
   if (total > REPORT_LIMITS.itemsTotal) return { ok: false, error: "too_many_items" };
-  return { ok: true, value: { name, department, contact, identifier, urgent, topics } };
+  const files: ReportInput["files"] = [];
+  for (const raw of Array.isArray(b.files) ? b.files : []) {
+    const f = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
+    if (!f || typeof f.id !== "number" || !Number.isInteger(f.id) || typeof f.token !== "string" || !/^[0-9a-f]{32}$/.test(f.token)) {
+      return { ok: false, error: "file_invalid" };
+    }
+    if (!files.some((x) => x.id === f.id)) files.push({ id: f.id, token: f.token });
+  }
+  if (files.length > 5) return { ok: false, error: "too_many_files" };
+  return { ok: true, value: { name, department, contact, identifier, urgent, topics, files } };
 }
 
 // ---------- แถว → DTO ----------
@@ -96,11 +110,14 @@ const SELECT = `
          COALESCE((SELECT json_agg(json_build_object('id', i.id, 'topic', i.topic, 'text', i.text, 'done', i.done,
                                                      'doneAt', floor(extract(epoch from i.done_at))::int, 'doneBy', i.done_by)
                                    ORDER BY i.position, i.id)
-                     FROM report_items i WHERE i.report_id = r.id), '[]'::json) AS items
+                     FROM report_items i WHERE i.report_id = r.id), '[]'::json) AS items,
+         COALESCE((SELECT json_agg(json_build_object('id', f.id, 'name', f.original_name, 'mime', f.mime, 'size', f.size) ORDER BY f.id)
+                     FROM report_files f WHERE f.report_id = r.id), '[]'::json) AS files
     FROM reports r`;
 
 function toDTO(r: Row): ReportDTO {
   const items = (Array.isArray(r.items) ? r.items : []) as Row[];
+  const files = (Array.isArray(r.files) ? r.files : []) as Row[];
   return {
     id: Number(r.id),
     ticketNo: String(r.ticket_no),
@@ -122,6 +139,13 @@ function toDTO(r: Row): ReportDTO {
       done: i.done === true,
       doneAt: num(i.doneAt),
       doneBy: String(i.doneBy ?? ""),
+    })),
+    files: files.map((f) => ({
+      id: Number(f.id),
+      name: String(f.name),
+      mime: String(f.mime),
+      size: Number(f.size),
+      kind: fileKind(String(f.mime)) ?? "image",
     })),
   };
 }
@@ -156,10 +180,19 @@ export async function createReport(input: ReportInput): Promise<{ id: number; ti
         await client.query("INSERT INTO report_items (report_id, topic, text, position) VALUES ($1, $2, $3, $4)", [id, t.topic, text, pos++]);
       }
     }
+    // ผูกไฟล์ที่อัปโหลดไว้ก่อน (ต้องเป็นไฟล์ที่ยังไม่ผูกกับรายงานอื่นและ token ตรง) — ไฟล์ที่ไม่ตรงถูกข้ามเงียบ ๆ
+    let attached = 0;
+    for (const f of input.files) {
+      const r = await client.query(
+        "UPDATE report_files SET report_id = $1 WHERE id = $2 AND token = $3 AND report_id IS NULL",
+        [id, f.id, f.token],
+      );
+      attached += r.rowCount ?? 0;
+    }
     await client.query("INSERT INTO report_events (report_id, type, actor, detail) VALUES ($1, 'created', $2, $3::jsonb)", [
       id,
       input.name,
-      JSON.stringify({ topics: input.topics.map((t) => t.topic), items: pos, urgent: input.urgent }),
+      JSON.stringify({ topics: input.topics.map((t) => t.topic), items: pos, urgent: input.urgent, files: attached }),
     ]);
     await client.query("COMMIT");
     return { id, ticketNo };
@@ -190,6 +223,47 @@ export async function listReports(status: ReportStatus | "all", limit = 200): Pr
   const order = status === "done" ? "ORDER BY r.done_at DESC NULLS LAST" : "ORDER BY r.urgent DESC, r.created_at ASC";
   const rows = await q<Row>(`${SELECT} ${where} ${status === "all" ? "ORDER BY r.created_at DESC" : order} LIMIT $1`, params);
   return rows.map(toDTO);
+}
+
+export type OwnerReportRow = {
+  id: number;
+  ticketNo: string;
+  status: ReportStatus;
+  assignee: string;
+  urgent: boolean;
+  createdAt: number;
+  doneAt: number | null;
+  itemsDone: number;
+  itemsTotal: number;
+};
+
+/** รายงานทั้งหมดของพนักงานคนหนึ่ง (identifier เดียวกัน) เรียงล่าสุดก่อน แบ่งหน้า */
+export async function listReportsForOwner(identifier: string, page = 1, perPage = 30) {
+  if (!/^cosi_[0-9a-f]{24}$/.test(identifier)) return { reports: [] as OwnerReportRow[], total: 0, page: 1, pages: 1, perPage };
+  const [c] = await q<{ n: string }>("SELECT count(*)::int::text AS n FROM reports WHERE identifier = $1", [identifier]);
+  const total = Number(c?.n ?? 0);
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const cur = Math.min(Math.max(1, page), pages);
+  const rows = await q<Record<string, unknown>>(
+    `SELECT r.id::text AS id, r.ticket_no, r.status, r.assignee_name, r.urgent,
+            floor(extract(epoch from r.created_at))::int AS created_at, floor(extract(epoch from r.done_at))::int AS done_at,
+            (SELECT count(*) FILTER (WHERE i.done) FROM report_items i WHERE i.report_id = r.id)::int AS items_done,
+            (SELECT count(*) FROM report_items i WHERE i.report_id = r.id)::int AS items_total
+       FROM reports r WHERE r.identifier = $1 ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`,
+    [identifier, perPage, (cur - 1) * perPage],
+  );
+  const reports: OwnerReportRow[] = rows.map((r) => ({
+    id: Number(r.id),
+    ticketNo: String(r.ticket_no),
+    status: (REPORT_STATUSES as string[]).includes(String(r.status)) ? (r.status as ReportStatus) : "new",
+    assignee: String(r.assignee_name ?? ""),
+    urgent: r.urgent === true,
+    createdAt: num(r.created_at) ?? 0,
+    doneAt: num(r.done_at),
+    itemsDone: Number(r.items_done ?? 0),
+    itemsTotal: Number(r.items_total ?? 0),
+  }));
+  return { reports, total, page: cur, pages, perPage };
 }
 
 export async function reportSummary(): Promise<{ new: number; inProgress: number; done: number }> {

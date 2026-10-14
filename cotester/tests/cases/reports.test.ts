@@ -28,6 +28,7 @@ describe("parseReportInput", () => {
         { topic: "network", items: ["Wi-Fi ຊັ້ນ 3 ຊ້າ"] },
         { topic: "computer", items: ["ເຄື່ອງພິມ 203 ພິມບໍ່ອອກ", "ຄອມຫ້ອງ 105 ເປີດບໍ່ຕິດ"] },
       ],
+      files: [],
     });
   });
 

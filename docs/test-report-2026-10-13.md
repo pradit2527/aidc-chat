@@ -6,8 +6,8 @@
 
 | ชุดทดสอบ | จำนวน | ผ่าน | ไม่ผ่าน | หมายเหตุ |
 |---|---|---|---|---|
-| Unit (jest, `cotester/tests/cases`) | 177 | 177 | 0 | 13 ไฟล์ ครอบคลุม lib ทั้งหมด + route identify/health/login + งานแจ้งปัญหา (อัปเดต 14 ต.ค.) |
-| End-to-end (Chatwoot จำลอง + ฐานทดสอบ) | 62 | 62 | 0 | `public.e2e.ts` 18, `admin.e2e.ts` 29, `report.e2e.ts` 15 (อัปเดต 14 ต.ค.) |
+| Unit (jest, `cotester/tests/cases`) | 196 | 196 | 0 | 13 ไฟล์ ครอบคลุม lib ทั้งหมด + route identify/health/login + งานแจ้งปัญหา (อัปเดต 14 ต.ค.) |
+| End-to-end (Chatwoot จำลอง + ฐานทดสอบ) | 68 | 68 | 0 | `public.e2e.ts` 18, `admin.e2e.ts` 29, `report.e2e.ts` 21 (รวมไฟล์แนบ + รายงานของฉัน, 14 ต.ค.) |
 | Smoke เซิร์ฟเวอร์ภายใน `http://10.0.100.54:3400` | 5 | 5 | 0 | อ่านอย่างเดียว ไม่ล็อกอิน |
 | UI responsive (เบราว์เซอร์ในแอป) | 6 | 6 | 0 | มือถือ 375px / แท็บเล็ต 768px / เดสก์ท็อป ไม่มี scroll แนวนอน |
 | Static: `tsc --noEmit`, `eslint`, `next build` | 3 | 3 | 0 | |

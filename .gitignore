@@ -23,3 +23,7 @@ npm-debug.log*
 /cotester/coverage/
 /cotester/.cache/
 /cotester/.audit.jsonl
+
+# ไฟล์แนบที่อัปโหลด (บนเซิร์ฟเวอร์)
+/data/
+/cotester/e2e/.uploads/

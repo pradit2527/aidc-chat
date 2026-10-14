@@ -83,3 +83,18 @@ CREATE INDEX IF NOT EXISTS reports_status_idx ON reports (status, created_at DES
 CREATE INDEX IF NOT EXISTS reports_identifier_idx ON reports (identifier);
 CREATE INDEX IF NOT EXISTS report_items_report_idx ON report_items (report_id, position);
 CREATE INDEX IF NOT EXISTS report_events_report_idx ON report_events (report_id, id);
+
+-- ไฟล์แนบของงานแจ้งปัญหา (รูป/วิดีโอ) — ตัวไฟล์อยู่บนดิสก์ของเซิร์ฟเวอร์ (UPLOAD_DIR) ตารางนี้เก็บเฉพาะข้อมูลไฟล์
+-- report_id ว่าง = อัปโหลดไว้ก่อนส่งรายงาน (ผูกตอน POST /api/reports ด้วย token)
+CREATE TABLE IF NOT EXISTS report_files (
+  id BIGSERIAL PRIMARY KEY,
+  report_id BIGINT REFERENCES reports(id) ON DELETE CASCADE,
+  token TEXT NOT NULL,
+  uploader TEXT NOT NULL DEFAULT '',   -- identifier ของเครื่องที่อัปโหลด
+  original_name TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  size BIGINT NOT NULL,
+  storage_key TEXT NOT NULL UNIQUE,    -- path สัมพัทธ์ใต้ UPLOAD_DIR
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS report_files_report_idx ON report_files (report_id, id);

@@ -9,6 +9,7 @@ import { getProfile } from "@/lib/profileStore";
 import type { ReportDTO, ReportStatus as Status } from "@/lib/reports";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
+import { ReportFiles } from "./ReportFiles";
 import { StaffHeader } from "./StaffHeader";
 
 type View = Omit<ReportDTO, "note">;
@@ -144,6 +145,8 @@ function Report({ r, stepLabel, onRefresh, lang }: { r: View; stepLabel: (s: Sta
           </div>
         ))}
       </div>
+
+      {r.files.length > 0 && <ReportFiles files={r.files} who={getProfile()?.identifier ?? ""} title={t("rcFiles")} />}
 
       {r.urgent && (
         <p className="flex items-center gap-1.5 text-sm font-semibold text-rose-700">

@@ -24,12 +24,12 @@ kill_port() { # Windows (Git Bash) / Linux
     fuser -k "$1/tcp" >/dev/null 2>&1 || true
   fi
 }
-cleanup() { echo "-> ปิดเซิร์ฟเวอร์ทดสอบ"; kill_port "$PORT"; kill_port "$MOCK_PORT"; kill "${MOCK:-}" "${NEXT:-}" 2>/dev/null || true; }
+cleanup() { echo "-> ปิดเซิร์ฟเวอร์ทดสอบ"; kill_port "$PORT"; kill_port "$MOCK_PORT"; kill "${MOCK:-}" "${NEXT:-}" 2>/dev/null || true; rm -rf "$LOG_DIR/.uploads"; }
 trap cleanup EXIT
 
 kill_port "$PORT"; kill_port "$MOCK_PORT"
 node cotester/e2e/mock-chatwoot.mjs > "$LOG_DIR/.mock.log" 2>&1 & MOCK=$!
-CHATWOOT_BASE_URL="http://127.0.0.1:$MOCK_PORT" DATABASE_URL="$TEST_DB_URL" SESSION_SECRET="e2e-session-secret-0123456789" \
+UPLOAD_DIR="$PWD/$LOG_DIR/.uploads" CHATWOOT_BASE_URL="http://127.0.0.1:$MOCK_PORT" DATABASE_URL="$TEST_DB_URL" SESSION_SECRET="e2e-session-secret-0123456789" \
   npx next dev -H 127.0.0.1 -p "$PORT" > "$LOG_DIR/.next.log" 2>&1 & NEXT=$!
 
 echo "-> รอเซิร์ฟเวอร์ที่ :$PORT"

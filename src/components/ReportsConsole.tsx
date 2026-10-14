@@ -9,6 +9,7 @@ import type { ReportDTO, ReportStatus } from "@/lib/reports";
 import { AidcLogo } from "./AidcLogo";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
+import { ReportFiles } from "./ReportFiles";
 
 type Tab = ReportStatus | "all";
 type ListRes = { enabled: boolean; status: Tab; summary: { new: number; inProgress: number; done: number }; reports: ReportDTO[] };
@@ -322,6 +323,12 @@ function Detail({
           ))}
         </div>
       </div>
+
+      {r.files.length > 0 && (
+        <div className="card p-4">
+          <ReportFiles files={r.files} title={t("rcFiles")} />
+        </div>
+      )}
 
       {/* บันทึกภายใน */}
       <div className="card p-4">

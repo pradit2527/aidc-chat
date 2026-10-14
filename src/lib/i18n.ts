@@ -296,6 +296,26 @@ const M = {
   rcContact: { lo: "ຕິດຕໍ່", en: "Contact" },
   rcNoDb: { lo: "ຍັງບໍ່ໄດ້ເຊື່ອມຖານຂໍ້ມູນ (DATABASE_URL)", en: "Database not configured (DATABASE_URL)" },
   rcAutoClosed: { lo: "ຕິ໊ກຄົບທຸກຂໍ້ → ປິດວຽກອັດຕະໂນມັດ", en: "All items ticked → report closes automatically" },
+  // ---- ไฟล์แนบ (รูป/วิดีโอ) ของงานแจ้งปัญหา ----
+  rpAttachTitle: { lo: "ຮູບ / ວິດີໂອ ປະກອບ (ບໍ່ບັງຄັບ)", en: "Photos / videos (optional)" },
+  rpAttachHint: { lo: "ສູງສຸດ 5 ໄຟລ໌ — ຮູບບໍ່ເກີນ 10 MB, ວິດີໂອບໍ່ເກີນ 50 MB", en: "Up to 5 files — photos up to 10 MB, videos up to 50 MB" },
+  rpAttach: { lo: "ແນບຮູບ / ວິດີໂອ", en: "Attach photo / video" },
+  rpAttachUploading: { lo: "ກຳລັງອັບໂຫລດ…", en: "Uploading…" },
+  rpAttachFailed: { lo: "ອັບໂຫລດບໍ່ສຳເລັດ", en: "Upload failed" },
+  rpAttachTooMany: { lo: "ແນບໄດ້ສູງສຸດ 5 ໄຟລ໌", en: "You can attach up to 5 files" },
+  rpAttachTooBig: { lo: "ໄຟລ໌ໃຫຍ່ເກີນກຳນົດ", en: "File is too large" },
+  rpAttachType: { lo: "ຮອງຮັບສະເພາະຮູບ ແລະ ວິດີໂອ", en: "Only photos and videos are supported" },
+  rpAttachNotAvailable: { lo: "ເຊີບເວີນີ້ບໍ່ຮອງຮັບການແນບໄຟລ໌", en: "Attachments are not available on this server" },
+  rpAttachRemove: { lo: "ເອົາອອກ", en: "Remove" },
+  rcFiles: { lo: "ໄຟລ໌ແນບ", en: "Attachments" },
+  rcOpenFile: { lo: "ເປີດ", en: "Open" },
+  // ---- รายงานของฉัน (หน้าหลัก): สถานะ ผู้รับเรื่อง แบ่งหน้า ----
+  hubAssignee: { lo: "ຜູ້ຮັບເລື່ອງ", en: "Handled by" },
+  hubNoAssignee: { lo: "ຍັງບໍ່ມີຜູ້ຮັບເລື່ອງ", en: "Not yet assigned" },
+  hubNoReports: { lo: "ຍັງບໍ່ມີລາຍງານ", en: "No reports yet" },
+  hubPage: { lo: "ໜ້າ {page}/{pages} · ທັງໝົດ {total}", en: "Page {page}/{pages} · {total} total" },
+  hubPrev: { lo: "ກ່ອນໜ້າ", en: "Previous" },
+  hubNext: { lo: "ຖັດໄປ", en: "Next" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type MsgKey = keyof typeof M;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loginAllowed, sameOrigin } from "@/lib/adminApi";
+import { rateLimit, sameOrigin } from "@/lib/adminApi";
 import { dbEnabled } from "@/lib/db";
 import { createReport, parseReportInput } from "@/lib/reports";
 
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!dbEnabled) return NextResponse.json({ error: "not_configured" }, { status: 503 });
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  if (!loginAllowed(`report:${ip}`)) return NextResponse.json({ error: "too_many_requests" }, { status: 429 });
+  if (!rateLimit(`report:${ip}`, 20)) return NextResponse.json({ error: "too_many_requests" }, { status: 429 });
 
   const parsed = parseReportInput(await req.json().catch(() => null));
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });

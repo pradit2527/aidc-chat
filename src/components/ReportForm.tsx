@@ -1,31 +1,62 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { CATEGORIES, DEPARTMENTS } from "@/lib/categories";
 import type { Lang } from "@/lib/i18n";
 import { addMyReport } from "@/lib/myReports";
 import { getProfile, saveProfile, subscribeProfile } from "@/lib/profileStore";
 import { REPORT_LIMITS } from "@/lib/reports";
+import { UPLOAD_LIMITS, validateUpload, type FileKind } from "@/lib/uploadRules";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
 import { StaffHeader } from "./StaffHeader";
 import { ProfileForm } from "./SupportPortal";
 
-type Props = { initialLang: Lang; enabled: boolean };
+type Props = { initialLang: Lang; enabled: boolean; uploads: boolean };
+
+/** ไฟล์แนบในฟอร์ม: อัปโหลดทันทีที่เลือก แล้วเก็บ id+token ไว้ส่งพร้อมรายงาน */
+type Attachment = {
+  key: string;
+  name: string;
+  kind: FileKind;
+  size: number;
+  preview: string;
+  status: "uploading" | "done" | "error";
+  id?: number;
+  token?: string;
+};
+
+/** ย่อรูปในเบราว์เซอร์ (ยาวสุด 1600px, JPEG) — วิดีโอ/GIF ส่งตามเดิม */
+async function shrinkImage(file: File): Promise<Blob> {
+  if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bmp.width * scale));
+    canvas.height = Math.max(1, Math.round(bmp.height * scale));
+    canvas.getContext("2d")?.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close();
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.82));
+    return blob && blob.size < file.size ? blob : file;
+  } catch {
+    return file;
+  }
+}
 
 /** แจ้งปัญหาแบบรายการ: เลือกหัวข้อ → พิมพ์ปัญหาเป็นข้อ ๆ → ส่งให้ทีมไอที (ไม่ผ่านแชท) */
-export default function ReportForm({ initialLang, enabled }: Props) {
+export default function ReportForm({ initialLang, enabled, uploads }: Props) {
   return (
     <I18nProvider initial={initialLang}>
-      <Form enabled={enabled} />
+      <Form enabled={enabled} uploads={uploads} />
     </I18nProvider>
   );
 }
 
 type Items = Record<string, string[]>;
 
-function Form({ enabled }: { enabled: boolean }) {
+function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
   const { t, lang } = useI18n();
   const profile = useSyncExternalStore(subscribeProfile, getProfile, () => undefined);
   const [editing, setEditing] = useState(false);
@@ -35,6 +66,47 @@ function Form({ enabled }: { enabled: boolean }) {
   const [urgent, setUrgent] = useState(false);
   const [phase, setPhase] = useState<"idle" | "sending" | "error">("idle");
   const [result, setResult] = useState<{ ticketNo: string; summary: { topic: string; items: string[] }[] } | null>(null);
+  const [files, setFiles] = useState<Attachment[]>([]);
+  const [fileErr, setFileErr] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const uploading = files.some((f) => f.status === "uploading");
+
+  async function pickFiles(list: FileList | null) {
+    if (!list || !profile) return;
+    setFileErr(null);
+    const picked = Array.from(list);
+    if (files.length + picked.length > UPLOAD_LIMITS.files) return setFileErr("rpAttachTooMany");
+    for (const file of picked) {
+      const err = validateUpload(file.type, file.size);
+      if (err) {
+        setFileErr(err === "file_type" ? "rpAttachType" : "rpAttachTooBig");
+        continue;
+      }
+      const key = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const kind: FileKind = file.type.startsWith("video/") ? "video" : "image";
+      const preview = URL.createObjectURL(file);
+      setFiles((f) => [...f, { key, name: file.name, kind, size: file.size, preview, status: "uploading" }]);
+      try {
+        const blob = kind === "image" ? await shrinkImage(file) : file;
+        const body = new FormData();
+        body.append("file", blob, file.name.replace(/\.[^.]+$/, "") + (blob !== file ? ".jpg" : file.name.match(/\.[^.]+$/)?.[0] ?? ""));
+        body.append("who", profile.identifier);
+        const r = await fetch("/api/reports/upload", { method: "POST", body });
+        if (!r.ok) throw new Error(String(r.status));
+        const j = (await r.json()) as { id: number; token: string; size: number };
+        setFiles((f) => f.map((x) => (x.key === key ? { ...x, status: "done", id: j.id, token: j.token, size: j.size } : x)));
+      } catch {
+        setFiles((f) => f.map((x) => (x.key === key ? { ...x, status: "error" } : x)));
+      }
+    }
+  }
+  function removeFile(key: string) {
+    setFiles((f) => {
+      const x = f.find((y) => y.key === key);
+      if (x) URL.revokeObjectURL(x.preview);
+      return f.filter((y) => y.key !== key);
+    });
+  }
 
   const ready = Boolean(profile) && !editing;
   const total = selected.reduce((n, id) => n + (items[id]?.length ?? 0), 0);
@@ -62,6 +134,8 @@ function Form({ enabled }: { enabled: boolean }) {
     setUrgent(false);
     setResult(null);
     setPhase("idle");
+    setFiles([]);
+    setFileErr(null);
   }
   function switchUser() {
     saveProfile(null);
@@ -70,7 +144,7 @@ function Form({ enabled }: { enabled: boolean }) {
   }
 
   async function send() {
-    if (!profile || total === 0 || phase === "sending") return;
+    if (!profile || total === 0 || phase === "sending" || uploading) return;
     setPhase("sending");
     const topics = selected.filter((id) => items[id]?.length).map((id) => ({ topic: id, items: items[id] }));
     try {
@@ -84,6 +158,7 @@ function Form({ enabled }: { enabled: boolean }) {
           identifier: profile.identifier,
           urgent,
           topics,
+          files: files.filter((f) => f.status === "done" && f.id && f.token).map((f) => ({ id: f.id, token: f.token })),
         }),
       });
       if (!r.ok) throw new Error(String(r.status));
@@ -284,16 +359,84 @@ function Form({ enabled }: { enabled: boolean }) {
               </label>
             </div>
 
+            {/* ไฟล์แนบ: รูป / วิดีโอ */}
+            <div className={ready ? "" : "pointer-events-none opacity-50"} aria-disabled={!ready}>
+              <h2 className="text-base font-semibold">{t("rpAttachTitle")}</h2>
+              <p className="mt-0.5 text-sm text-stone-500">{uploads ? t("rpAttachHint") : t("rpAttachNotAvailable")}</p>
+              {uploads && (
+                <>
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      void pickFiles(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={!ready || files.length >= UPLOAD_LIMITS.files}
+                      onClick={() => fileInput.current?.click()}
+                      className="flex items-center gap-2 rounded-lg border border-dashed border-brand-400 bg-brand-50/60 px-4 py-2.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 disabled:opacity-40"
+                    >
+                      <Icon name="clip" className="h-4 w-4" />
+                      {t("rpAttach")}
+                    </button>
+                    <span className="text-xs text-stone-500">
+                      {files.length}/{UPLOAD_LIMITS.files}
+                    </span>
+                  </div>
+                  {fileErr && (
+                    <p role="alert" className="mt-2 text-sm text-rose-600">
+                      {t(fileErr as "rpAttachTooMany")}
+                    </p>
+                  )}
+                  {files.length > 0 && (
+                    <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                      {files.map((f) => (
+                        <li key={f.key} className="relative overflow-hidden rounded-xl border border-stone-200 bg-white">
+                          {f.kind === "image" ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- ภาพตัวอย่างจาก object URL ในเครื่อง
+                            <img src={f.preview} alt={f.name} className="aspect-square w-full object-cover" />
+                          ) : (
+                            <video src={f.preview} muted playsInline preload="metadata" className="aspect-square w-full bg-black object-contain" />
+                          )}
+                          <div className="truncate px-2 py-1 text-[11px] text-stone-600" title={f.name}>
+                            {f.status === "uploading" ? t("rpAttachUploading") : f.status === "error" ? t("rpAttachFailed") : f.name}
+                          </div>
+                          {f.status === "uploading" && <span className="absolute inset-0 grid place-items-center bg-white/60 text-xs font-semibold text-deep-800">…</span>}
+                          {f.status === "error" && <span className="absolute inset-x-0 top-0 bg-rose-600 px-2 py-0.5 text-center text-[11px] font-semibold text-white">{t("rpAttachFailed")}</span>}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(f.key)}
+                            aria-label={t("rpAttachRemove")}
+                            title={t("rpAttachRemove")}
+                            className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white hover:bg-rose-600"
+                          >
+                            <Icon name="trash" className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+
             {/* ส่ง */}
             <div>
               <button
                 type="button"
                 onClick={send}
-                disabled={!ready || total === 0 || !enabled || phase === "sending"}
+                disabled={!ready || total === 0 || !enabled || phase === "sending" || uploading}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500 px-5 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-600/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-stone-300 disabled:via-stone-300 disabled:to-stone-300 disabled:shadow-none"
               >
                 <Icon name="send" className="h-5 w-5" />
-                {phase === "sending" ? t("rpSending") : ready && total === 0 ? t("rpNeedItems") : `${t("rpSend")}${total ? ` (${t("rpItems", { n: total })})` : ""}`}
+                {phase === "sending" ? t("rpSending") : uploading ? t("rpAttachUploading") : ready && total === 0 ? t("rpNeedItems") : `${t("rpSend")}${total ? ` (${t("rpItems", { n: total })})` : ""}`}
               </button>
               {!enabled ? (
                 <p role="alert" className="mt-2 text-sm text-rose-600">
