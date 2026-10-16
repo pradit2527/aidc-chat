@@ -224,12 +224,12 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
               {stats.recent.length === 0 ? (
                 <p className="py-8 text-center text-sm text-stone-400">{t("stEmpty")}</p>
               ) : view === "table" ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px] text-sm">
+                <div className="overflow-x-auto rounded-xl ring-1 ring-stone-200">
+                  <table className="w-full min-w-[760px] border-collapse text-sm">
                     <thead>
-                      <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                      <tr className="bg-deep-800 text-left text-[11px] font-semibold uppercase tracking-wide text-white">
                         {[t("stColTicket"), t("stColName"), t("stColLabel"), t("stColStatus"), t("stColAgent"), t("stColCreatedAt"), t("stColResolvedAt")].map((h, i) => (
-                          <th key={h} className="whitespace-nowrap border-b border-stone-200 px-3 pb-2.5">
+                          <th key={h} className="whitespace-nowrap px-3 py-2.5">
                             {h}
                           </th>
                         ))}
@@ -237,7 +237,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                     </thead>
                     <tbody>
                       {stats.recent.map((r) => (
-                        <tr key={r.id} className="border-b border-stone-100 transition last:border-0 hover:bg-brand-50/50">
+                        <tr key={r.id} className="border-t border-stone-200 transition odd:bg-white even:bg-stone-50 hover:bg-brand-50">
                           <td className="whitespace-nowrap px-3 py-2.5 font-semibold tabular-nums">
                             <a href={`/admin/chat?c=${r.id}`} className="text-brand-700 hover:underline">
                               {r.ticketNo}
@@ -381,70 +381,76 @@ function Panel({
   );
 }
 
-type Col = { label: string; /** คอลัมน์ที่มีแถบสัดส่วน (กว้างขึ้น) */ wide?: boolean };
+type Col = { label: string; /** คอลัมน์ที่มีแถบสัดส่วน (ชิดซ้าย) */ wide?: boolean };
 
-/** ตารางสรุป: หัวเทาตัวเล็ก, เส้นบางคั่นแถว, ไฮไลต์แถวตอนชี้, แถวรวมท้ายตาราง (ถ้ามี) */
+/**
+ * ตารางสรุป: กรอบมน + หัวตารางสีเขียวเข้มตัวขาว, แถวสลับสี, เส้นตารางบาง ๆ ทั้งแนวตั้งและแนวนอน,
+ * ไฮไลต์แถวตอนชี้, แถวรวมสีส้มอ่อนท้ายตาราง (ถ้ามี)
+ */
 function DataTable({ head, rows, empty, foot }: { head: Col[]; rows: { key: string; cells: React.ReactNode[] }[]; empty: string; foot?: React.ReactNode[] }) {
+  const align = (j: number) => (j === 0 || head[j]?.wide ? "text-left" : "text-center");
   return (
-    <table className="w-full border-separate border-spacing-0 text-sm">
-      <thead>
-        <tr className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
-          {head.map((h, i) => (
-            <th key={h.label} className={`whitespace-nowrap border-b border-stone-200 px-2 pb-2 ${i === 0 ? "w-full text-left" : h.wide ? "min-w-[5rem] text-left" : "text-right"}`}>
-              {h.label}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.length === 0 && (
-          <tr>
-            <td colSpan={head.length} className="py-8 text-center text-stone-400">
-              {empty}
-            </td>
-          </tr>
-        )}
-        {rows.map((r) => (
-          <tr key={r.key} className="group transition hover:bg-brand-50/50">
-            {r.cells.map((cell, j) =>
-              j === 0 ? (
-                // max-w-0 + truncate: คอลัมน์แรกยืดเต็มที่เหลือและตัดด้วย … แทนที่จะดันตารางล้นการ์ด
-                <td key={j} className="max-w-0 border-b border-stone-100 px-2 py-2.5 text-stone-800 group-last:border-0">
-                  <span className="block truncate">{cell}</span>
-                </td>
-              ) : (
-                <td key={j} className={`whitespace-nowrap border-b border-stone-100 px-2 py-2.5 tabular-nums text-stone-700 group-last:border-0 ${head[j]?.wide ? "text-left" : "text-right"}`}>
-                  {cell}
-                </td>
-              ),
-            )}
-          </tr>
-        ))}
-      </tbody>
-      {foot && rows.length > 0 && (
-        <tfoot>
-          <tr className="text-xs font-bold text-deep-800">
-            {foot.map((c, j) => (
-              <td key={j} className={`border-t-2 border-stone-200 px-2 pt-2.5 tabular-nums ${j === 0 ? "text-left uppercase tracking-wide text-stone-500" : head[j]?.wide ? "text-left" : "text-right"}`}>
-                {c}
-              </td>
+    <div className="overflow-hidden rounded-xl ring-1 ring-stone-200">
+      <table className="w-full border-collapse text-[13px]">
+        <thead>
+          <tr className="bg-deep-800 text-[11px] font-semibold uppercase tracking-wide text-white">
+            {head.map((h, j) => (
+              <th key={h.label} className={`whitespace-nowrap px-2 py-2.5 ${j === 0 ? "w-full" : ""} ${align(j)} ${j > 0 ? "border-l border-white/10" : ""}`}>
+                {h.label}
+              </th>
             ))}
           </tr>
-        </tfoot>
-      )}
-    </table>
+        </thead>
+        <tbody>
+          {rows.length === 0 && (
+            <tr>
+              <td colSpan={head.length} className="py-8 text-center text-stone-400">
+                {empty}
+              </td>
+            </tr>
+          )}
+          {rows.map((r) => (
+            <tr key={r.key} className="border-t border-stone-200 transition odd:bg-white even:bg-stone-50 hover:bg-brand-50">
+              {r.cells.map((cell, j) =>
+                j === 0 ? (
+                  // max-w-0 + truncate: คอลัมน์แรกยืดเต็มที่เหลือและตัดด้วย … แทนที่จะดันตารางล้นการ์ด
+                  <td key={j} className="max-w-0 px-2 py-2.5 text-stone-800">
+                    <span className="block truncate">{cell}</span>
+                  </td>
+                ) : (
+                  <td key={j} className={`whitespace-nowrap border-l border-stone-200 px-2 py-2.5 tabular-nums text-stone-700 ${align(j)}`}>
+                    {cell}
+                  </td>
+                ),
+              )}
+            </tr>
+          ))}
+        </tbody>
+        {foot && rows.length > 0 && (
+          <tfoot>
+            <tr className="border-t-2 border-brand-200 bg-brand-50 text-xs font-bold text-brand-800">
+              {foot.map((c, j) => (
+                <td key={j} className={`px-2 py-2.5 tabular-nums ${align(j)} ${j > 0 ? "border-l border-brand-100" : "uppercase tracking-wide"}`}>
+                  {c}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </div>
   );
 }
 
-/** ตัวเลขพร้อมแถบสัดส่วนเทียบค่าสูงสุดในตาราง (แถบเต็มความกว้างช่อง) */
+/** ตัวเลขพร้อมแถบสัดส่วนเทียบค่าสูงสุดในตาราง */
 function Bar({ value, max }: { value: number; max: number }) {
-  const pct = value === 0 ? 0 : Math.max(6, Math.round((value / Math.max(1, max)) * 100));
+  const pct = value === 0 ? 0 : Math.max(8, Math.round((value / Math.max(1, max)) * 100));
   return (
-    <span className="flex items-center gap-2">
-      <span className="h-2 w-10 flex-1 overflow-hidden rounded-full bg-stone-100" aria-hidden>
+    <span className="flex items-center gap-1.5">
+      <span className="h-2 w-8 shrink-0 overflow-hidden rounded-full bg-stone-200/70" aria-hidden>
         <span className="block h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600" style={{ width: `${pct}%` }} />
       </span>
-      <span className="w-5 text-right text-sm font-bold text-deep-800">{value}</span>
+      <span className="min-w-4 text-right text-sm font-bold text-deep-800">{value}</span>
     </span>
   );
 }
