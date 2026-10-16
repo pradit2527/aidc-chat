@@ -464,7 +464,7 @@ export default function AdminConsole({ user, onSignedOut, demo = false, initialC
       (!q || c.name.toLowerCase().includes(q) || c.preview.toLowerCase().includes(q) || c.subtitle.toLowerCase().includes(q)),
   );
   // มุมมองแบบเดียวกับหน้า inbox ของ Chatwoot: ของฉัน / ยังไม่มีผู้รับ / ทั้งหมด
-  const isMine = (c: ConversationDTO) => c.assignee?.id === user.id;
+  const isMine = (c: ConversationDTO) => c.assignee?.id === (user.agentId ?? user.id);
   const scopeCounts = {
     mine: baseRows.filter(isMine).length,
     unassigned: baseRows.filter((c) => !c.assignee).length,
@@ -474,7 +474,7 @@ export default function AdminConsole({ user, onSignedOut, demo = false, initialC
   const listLoading = tab === "open" ? openList === null : tabList === null;
 
   const selected = [...openRows, ...(tabList ?? [])].find((c) => c.id === selectedId) ?? null;
-  const iAmAssignee = selected?.assignee?.id === user.id;
+  const iAmAssignee = selected?.assignee?.id === (user.agentId ?? user.id);
 
   // หัวข้อของเคสที่เปิดอยู่ (ไม่รวมป้าย "ด่วน" ซึ่งเป็นแค่ระดับความเร่งด่วน)
   const topicItem = (l: string): TopicItem => ({
@@ -513,7 +513,7 @@ export default function AdminConsole({ user, onSignedOut, demo = false, initialC
       {!iAmAssignee && (
         <button
           type="button"
-          onClick={() => void assign(user.id)}
+          onClick={() => void assign(user.agentId ?? user.id)}
           className="h-10 shrink-0 rounded-lg border border-stone-300 bg-white px-3 text-sm font-medium hover:bg-stone-50 sm:h-9"
         >
           {t("admAssignMe")}

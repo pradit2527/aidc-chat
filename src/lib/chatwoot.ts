@@ -9,6 +9,9 @@ export function chatwootConfig() {
   };
 }
 
+/** access token (Chatwoot → Profile Settings → Access Token) ของ "บัญชี agent กลาง" ที่แอดมินในระบบเองใช้ส่งต่อไปคอนโซลแชท — ว่าง = แอดมินในระบบเองใช้แชทไม่ได้ */
+export const agentToken = () => (process.env.CHATWOOT_AGENT_TOKEN || "").trim();
+
 /** identifier_hash ที่ Chatwoot ใช้ยืนยันว่า identifier มาจากเซิร์ฟเวอร์ของเรา (HMAC-SHA256, hex) */
 export function signIdentifier(identifier: string): string | null {
   const { hmacToken } = chatwootConfig();

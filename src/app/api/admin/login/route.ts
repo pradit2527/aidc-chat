@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isHttps, loginAllowed, rateLimit, sameOrigin } from "@/lib/adminApi";
-import { chatwootConfig } from "@/lib/chatwoot";
+import { agentToken, chatwootConfig } from "@/lib/chatwoot";
 import { ACCOUNT_ID } from "@/lib/cw";
 import { SESSION_COOKIE, SESSION_TTL_SEC, sealSession, type Session } from "@/lib/session";
 import { authenticate, normalizeUsername } from "@/lib/users";
@@ -89,11 +89,12 @@ async function localAdminLogin(req: NextRequest, usernameRaw: string, password: 
     return NextResponse.json({ error: "chatwoot_error" }, { status: 502 });
   }
   if (!user) return NextResponse.json({ error: "invalid_credentials" }, { status: 401 });
+  const agent = await centralAgent();
   const session: Session = {
     token: "",
     client: "",
     uid: `local:${user.id}`,
-    user: { id: user.id, name: user.name, email: user.username, local: true },
+    user: { id: user.id, name: user.name, email: user.username, local: true, chat: Boolean(agent), ...(agent ? { agentId: agent.id } : {}) },
     local: true,
     exp: Date.now() + SESSION_TTL_SEC * 1000,
   };
@@ -106,4 +107,22 @@ async function localAdminLogin(req: NextRequest, usernameRaw: string, password: 
     maxAge: SESSION_TTL_SEC,
   });
   return out;
+}
+
+/** ตรวจ token ของ agent กลางกับ Chatwoot (ได้ id ไว้ใช้มอบหมาย/กรอง "ของฉัน") — null = ไม่ได้ตั้ง/ใช้ไม่ได้ */
+async function centralAgent(): Promise<{ id: number } | null> {
+  const token = agentToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${chatwootConfig().baseUrl}/api/v1/profile`, {
+      headers: { api_access_token: token, accept: "application/json" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const id = Number(((await res.json().catch(() => ({}))) as { id?: unknown }).id);
+    return Number.isFinite(id) && id > 0 ? { id } : null;
+  } catch {
+    return null;
+  }
 }

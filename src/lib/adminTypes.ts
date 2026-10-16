@@ -3,7 +3,16 @@
 export type ConvStatus = "open" | "resolved" | "pending" | "snoozed";
 
 /** local = แอดมินบัญชีในระบบเอง (email คือ username) */
-export type AdminUser = { id: number; name: string; email: string; local?: boolean };
+export type AdminUser = {
+  id: number;
+  name: string;
+  email: string;
+  local?: boolean;
+  /** (เฉพาะ local) ใช้คอนโซลแชทได้ — ตั้ง CHATWOOT_AGENT_TOKEN ไว้และ token ใช้ได้ */
+  chat?: boolean;
+  /** (เฉพาะ local + chat) id ของ agent กลางใน Chatwoot ใช้แทน user.id ตอนมอบหมาย/กรอง "ของฉัน" */
+  agentId?: number;
+};
 
 export type ConversationDTO = {
   id: number;

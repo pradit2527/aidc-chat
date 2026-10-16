@@ -35,8 +35,10 @@ export async function POST(req: Request, { params }: Ctx) {
   return adminRoute(
     req,
     async (s) => {
+      // แอดมินในระบบเองส่งผ่าน agent กลาง — ใส่ชื่อผู้ตอบจริงท้ายข้อความ เพื่อให้รู้ว่าใครตอบ
+      const signed = s.local ? `${content}\n\n— ${s.user.name}` : content;
       const raw = await cw<unknown>(s, acct(`/conversations/${id}/messages`), {
-        json: { content, message_type: "outgoing", private: body?.private === true },
+        json: { content: signed, message_type: "outgoing", private: body?.private === true },
       });
       const isNote = body?.private === true;
       await logEvent(id, isNote ? "note" : "replied", s.user.name, {});

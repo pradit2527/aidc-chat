@@ -7,7 +7,7 @@ import type {
   ConvStatus,
   MessageDTO,
 } from "./adminTypes";
-import { chatwootConfig } from "./chatwoot";
+import { agentToken, chatwootConfig } from "./chatwoot";
 import type { Session } from "./session";
 
 export const ACCOUNT_ID = process.env.CHATWOOT_ACCOUNT_ID || "1";
@@ -25,17 +25,16 @@ export class CwError extends Error {
 export const acct = (path: string) => `/api/v1/accounts/${ACCOUNT_ID}${path}`;
 
 export async function cw<T>(s: Session, path: string, init: { method?: string; json?: unknown } = {}): Promise<T> {
-  // แอดมินบัญชีในระบบเอง ไม่มี token Chatwoot — ฟีเจอร์แชทต้องใช้บัญชี Chatwoot
-  if (s.local) throw new CwError(403, "chatwoot account required");
+  // แอดมินบัญชีในระบบเอง: ใช้ token ของ agent กลาง (CHATWOOT_AGENT_TOKEN); ไม่ได้ตั้ง → ใช้แชทไม่ได้
+  const central = s.local ? agentToken() : "";
+  if (s.local && !central) throw new CwError(403, "chatwoot agent token not configured");
   const { baseUrl } = chatwootConfig();
   let res: Response;
   try {
     res = await fetch(baseUrl + path, {
       method: init.method ?? (init.json !== undefined ? "POST" : "GET"),
       headers: {
-        "access-token": s.token,
-        client: s.client,
-        uid: s.uid,
+        ...(s.local ? { api_access_token: central } : { "access-token": s.token, client: s.client, uid: s.uid }),
         accept: "application/json",
         ...(init.json !== undefined ? { "content-type": "application/json" } : {}),
       },

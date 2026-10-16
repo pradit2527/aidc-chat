@@ -29,6 +29,6 @@ export default async function AdminChatPage({ searchParams }: { searchParams: Pr
       user = null;
     }
   }
-  if (user?.local) redirect("/admin"); // แอดมินในระบบเอง ไม่มี token Chatwoot — คอนโซลแชทต้องใช้บัญชี Chatwoot
+  if (user?.local && !user.chat) redirect("/admin"); // แอดมินในระบบเองจะใช้แชทได้ต้องตั้ง CHATWOOT_AGENT_TOKEN
   return <AdminApp initialLang={initialLang} user={user} configured={configured} view="chat" initialConversationId={initialConversationId} />;
 }

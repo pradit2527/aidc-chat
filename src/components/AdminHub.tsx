@@ -27,7 +27,7 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
   const load = useCallback(async () => {
     try {
       const [c, rNew, rProg] = await Promise.all([
-        user.local ? Promise.resolve({ conversations: [] as ConversationDTO[] }) : api<{ conversations: ConversationDTO[] }>("/api/admin/conversations?status=open"),
+        user.local && !user.chat ? Promise.resolve({ conversations: [] as ConversationDTO[] }) : api<{ conversations: ConversationDTO[] }>("/api/admin/conversations?status=open"),
         api<ReportsRes>("/api/admin/reports?status=new"),
         api<ReportsRes>("/api/admin/reports?status=in_progress"),
       ]);
@@ -38,7 +38,7 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
     } catch {
       setError(true);
     }
-  }, [user.local]);
+  }, [user.local, user.chat]);
 
   useLive(load, 5_000);
 
@@ -59,11 +59,11 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
             n={1}
             icon="chat"
             title={t("ahChat")}
-            hint={user.local ? t("ahChatNeedsCw") : t("ahChatHint")}
+            hint={user.local && !user.chat ? t("ahChatNeedsCw") : t("ahChatHint")}
             badge={waiting}
             badgeLabel={t("ahWaiting")}
             cta={t("hubGo")}
-            disabled={user.local}
+            disabled={user.local && !user.chat}
           />
           <Choice href="/admin/reports" n={2} icon="clipboard" title={t("ahReports")} hint={t("ahReportsHint")} badge={newReports} badgeLabel={t("rcTabNew")} cta={t("hubGo")} />
           <Choice href="/admin/users" n={3} icon="user" title={t("admUsers")} hint={t("ahUsersHint")} cta={t("hubGo")} />
@@ -77,7 +77,7 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
 
         {/* สรุปรายการค้าง */}
         <div className="grid gap-4 lg:grid-cols-2">
-          {!user.local && (
+          {!(user.local && !user.chat) && (
           <section className="card p-4">
             <div className="flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-sm font-semibold">
