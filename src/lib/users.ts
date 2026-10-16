@@ -5,7 +5,9 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db, dbEnabled, q } from "./db";
 
-export type Role = "staff" | "admin";
+/** staff = พนักงาน (/login) · admin = แอดมินในระบบเอง (/admin) · manager = หัวหน้าโรงแรม (/manager ดูแดชบอร์ดอย่างเดียว, มีได้คนเดียว) */
+export type Role = "staff" | "admin" | "manager";
+export const toRole = (v: unknown): Role => (v === "admin" || v === "manager" ? v : "staff");
 
 export type User = {
   id: number;
@@ -72,6 +74,7 @@ function ensureTable(): Promise<void> {
          created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
     )
     .then(() => db().query("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'staff'"))
+    .then(() => db().query("CREATE UNIQUE INDEX IF NOT EXISTS app_users_one_manager ON app_users ((1)) WHERE role = 'manager'"))
     .then(() => undefined)
     .catch((e) => {
       ensured = null;
@@ -84,13 +87,13 @@ type DbRow = { id: string; username: string; role?: string; password_hash: strin
 const fromDb = (r: DbRow): UserRow => ({
   id: Number(r.id),
   username: r.username,
-  role: r.role === "admin" ? "admin" : "staff",
+  role: toRole(r.role),
   passwordHash: r.password_hash,
   name: r.name,
   department: r.department,
   contact: r.contact,
 });
-const strip = (u: UserRow): User => ({ id: u.id, username: u.username, role: u.role === "admin" ? "admin" : "staff", name: u.name, department: u.department, contact: u.contact });
+const strip = (u: UserRow): User => ({ id: u.id, username: u.username, role: toRole(u.role), name: u.name, department: u.department, contact: u.contact });
 
 async function findRow(username: string): Promise<UserRow | null> {
   if (dbEnabled) {
@@ -102,6 +105,7 @@ async function findRow(username: string): Promise<UserRow | null> {
 }
 
 export class UsernameTakenError extends Error {}
+export class ManagerExistsError extends Error {}
 
 export async function createUser(input: {
   role?: Role;
@@ -113,20 +117,29 @@ export async function createUser(input: {
 }): Promise<User> {
   const passwordHash = await hashPassword(input.password);
   const { username, name, department, contact } = input;
-  const role: Role = input.role === "admin" ? "admin" : "staff";
+  const role: Role = toRole(input.role);
   if (dbEnabled) {
     await ensureTable();
-    const r = await q<DbRow>(
-      `INSERT INTO app_users (username, password_hash, name, department, contact, role)
-       VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (username) DO NOTHING RETURNING *`,
-      [username, passwordHash, name, department, contact, role],
-    );
+    if (role === "manager" && (await q("SELECT 1 FROM app_users WHERE role = 'manager'")).length > 0) throw new ManagerExistsError();
+    let r: DbRow[];
+    try {
+      r = await q<DbRow>(
+        `INSERT INTO app_users (username, password_hash, name, department, contact, role)
+         VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (username) DO NOTHING RETURNING *`,
+        [username, passwordHash, name, department, contact, role],
+      );
+    } catch (e) {
+      // ดัชนี unique ของหัวหน้า (สร้างพร้อมกันสองคำขอ)
+      if (role === "manager" && (e as { code?: string }).code === "23505") throw new ManagerExistsError();
+      throw e;
+    }
     if (!r[0]) throw new UsernameTakenError();
     return strip(fromDb(r[0]));
   }
   const run = chain.then(async () => {
     const d = await readFileStore();
     if (d.users.some((u) => u.username === username)) throw new UsernameTakenError();
+    if (role === "manager" && d.users.some((u) => toRole(u.role) === "manager")) throw new ManagerExistsError();
     const row = { id: d.nextId, username, role, passwordHash, name, department, contact, createdAt: new Date().toISOString() };
     d.users.push(row);
     d.nextId += 1;

@@ -9,10 +9,10 @@ import { Icon } from "./Icon";
 import { StaffHeader } from "./StaffHeader";
 
 /** หน้าล็อกอินของพนักงาน — ปลายทางของ QR; สำเร็จแล้วไป `next` (ค่าเริ่มต้น /start) · บัญชีสร้างโดยทีมไอทีที่ /admin/users */
-export default function AuthForm({ next, initialLang }: { next: string; initialLang: Lang }) {
+export default function AuthForm({ next, initialLang, manager = false }: { next: string; initialLang: Lang; manager?: boolean }) {
   return (
     <I18nProvider initial={initialLang}>
-      <Form next={next} />
+      <Form next={next} manager={manager} />
     </I18nProvider>
   );
 }
@@ -22,7 +22,7 @@ const ERRORS: Record<string, MsgKey> = {
   too_many_attempts: "errTooMany",
 };
 
-function Form({ next }: { next: string }) {
+function Form({ next, manager }: { next: string; manager: boolean }) {
   const { t } = useI18n();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -37,17 +37,17 @@ function Form({ next }: { next: string }) {
     setError(null);
     setBusy(true);
     try {
-      const r = await fetch("/api/auth/login", {
+      const r = await fetch(manager ? "/api/manager/login" : "/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-      const data = (await r.json().catch(() => ({}))) as { profile?: Profile; error?: string };
-      if (!r.ok || !data.profile) {
+      const data = (await r.json().catch(() => ({}))) as { profile?: Profile; ok?: boolean; error?: string };
+      if (!r.ok || !(manager ? data.ok : data.profile)) {
         setError(ERRORS[data.error ?? ""] ?? "errServer");
         return;
       }
-      saveProfile(data.profile);
+      if (data.profile) saveProfile(data.profile);
       // โหลดเต็มหน้า เพื่อให้เซิร์ฟเวอร์อ่านคุกกี้ใหม่และ render หน้าปลายทางด้วยข้อมูลผู้ใช้
       window.location.assign(next);
     } catch {
@@ -62,7 +62,7 @@ function Form({ next }: { next: string }) {
 
   return (
     <div className="min-h-screen">
-      <StaffHeader title={t("loginTitle")} subtitle={t("loginSub")} />
+      <StaffHeader title={manager ? t("mgrLoginTitle") : t("loginTitle")} subtitle={manager ? t("mgrLoginSub") : t("loginSub")} />
       <main className="relative z-10 mx-auto -mt-8 max-w-md px-4 pb-10">
         <form onSubmit={submit} className="card space-y-4 p-5 sm:p-6" noValidate>
           <label className="block text-sm font-medium">
@@ -105,7 +105,7 @@ function Form({ next }: { next: string }) {
             {busy ? t("loggingIn") : t("loginBtn")}
           </button>
 
-          <p className="border-t border-stone-200 pt-4 text-center text-sm text-stone-600">{t("noAccountAsk")}</p>
+          <p className="border-t border-stone-200 pt-4 text-center text-sm text-stone-600">{manager ? t("mgrNoAccountAsk") : t("noAccountAsk")}</p>
         </form>
       </main>
     </div>

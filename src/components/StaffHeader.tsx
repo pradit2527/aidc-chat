@@ -16,12 +16,15 @@ export function StaffHeader({
   subtitle,
   backHref,
   steps,
+  extra,
 }: {
   title: string;
   subtitle?: string;
   backHref?: string;
   /** ขั้นตอนสั้น ๆ แสดงเป็นเม็ดเลข 1,2,3 ใต้คำอธิบาย (เหมือนหน้าแชท) */
   steps?: string[];
+  /** ปุ่มเพิ่มเติมก่อนปุ่มสลับภาษา (เช่น ออกจากระบบ) */
+  extra?: React.ReactNode;
 }) {
   const { t, lang, setLang } = useI18n();
   return (
@@ -52,6 +55,8 @@ export function StaffHeader({
               <div className="text-xs text-white/80">IT Support</div>
             </div>
           </div>
+          <div className="flex shrink-0 items-center gap-2">
+          {extra}
           <div className="flex shrink-0 rounded-full bg-white/15 p-0.5 ring-1 ring-white/25" role="group" aria-label="Language">
             {LANGS.map((l) => (
               <button
@@ -66,6 +71,7 @@ export function StaffHeader({
                 {l.label}
               </button>
             ))}
+          </div>
           </div>
         </div>
         <div className="mt-5 grid items-center gap-5 md:grid-cols-[1fr_13rem] md:gap-8">

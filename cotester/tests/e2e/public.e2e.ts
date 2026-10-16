@@ -213,6 +213,27 @@ describe("บัญชีพนักงาน: แอดมินสร้า�
     expect((await new Client().post("/api/auth/login", { username: adminName, password: "adm-pass-1" })).status).toBe(401);
     expect((await new Client().post("/api/admin/login", { email: name, password: "new-pass-22" })).status).toBe(401); // พนักงานเข้าแอดมินไม่ได้
   });
+  test("หัวหน้า (role manager, มีได้คนเดียว): สร้างโดยแอดมิน → ล็อกอิน /manager ดูแดชบอร์ดได้ แต่ใช้พอร์ทัล/แอดมินไม่ได้", async () => {
+    const mgrName = `mgr.${randomBytes(4).toString("hex")}`;
+    expect((await c.get("/api/manager/dashboard")).status).toBe(401);
+    const r = await c.get("/manager");
+    expect([301, 302, 307, 308]).toContain(r.status);
+    expect(r.redirect).toContain("/manager/login");
+    const first = await adminCreateUser({ role: "manager", username: mgrName, password: "mgr-pass-1", name: "Head" }, admin);
+    expect([201, 409]).toContain(first.res.status); // 409 = มีหัวหน้าอยู่แล้วจากการรันก่อนหน้า
+    if (first.res.status === 201) {
+      expect((await adminCreateUser({ role: "manager", username: `${mgrName}2`, password: "mgr-pass-1", name: "Head 2" }, admin)).res.status).toBe(409);
+      const m = new Client();
+      expect((await m.post("/api/manager/login", { username: mgrName, password: "bad" })).status).toBe(401);
+      expect((await m.post("/api/manager/login", { username: mgrName, password: "mgr-pass-1" })).status).toBe(200);
+      const d = await m.get("/api/manager/dashboard");
+      expect(d.status).toBe(200);
+      expect(d.json).toMatchObject({ enabled: true, totals: { chat: { new: expect.any(Number) }, report: { done: expect.any(Number) } } });
+      expect((await m.get("/manager")).status).toBe(200);
+      expect((await new Client().post("/api/auth/login", { username: mgrName, password: "mgr-pass-1" })).status).toBe(401);
+      expect((await new Client().post("/api/admin/login", { email: mgrName, password: "mgr-pass-1" })).status).toBe(401);
+    }
+  });
   test("/admin/users ต้องล็อกอินแอดมิน (ไม่งั้นเด้ง /admin)", async () => {
     const r = await c.get("/admin/users");
     expect([301, 302, 307, 308]).toContain(r.status);

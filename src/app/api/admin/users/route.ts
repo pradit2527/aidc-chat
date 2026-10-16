@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminGuard } from "@/lib/adminApi";
 import { parseNewUser } from "@/lib/userInput";
-import { createUser, listUsers, UsernameTakenError } from "@/lib/users";
+import { createUser, listUsers, ManagerExistsError, UsernameTakenError } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ user }, { status: 201 });
   } catch (e) {
     if (e instanceof UsernameTakenError) return NextResponse.json({ error: "username_taken" }, { status: 409 });
+    if (e instanceof ManagerExistsError) return NextResponse.json({ error: "manager_exists" }, { status: 409 });
     console.error("[admin/users] create failed:", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "storage_error" }, { status: 500 });
   }

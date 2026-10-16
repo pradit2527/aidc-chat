@@ -17,6 +17,7 @@ import {
   hashPassword,
   listUsers,
   updateUser,
+  ManagerExistsError,
   UsernameTakenError,
   USERNAME_RE,
   verifyPassword,
@@ -70,6 +71,21 @@ describe("บทบาท staff / admin", () => {
     const s = await createUser({ username: "worker", password: "workerpw1", name: "W", department: "sales", contact: "" });
     expect(s.role).toBe("staff");
     expect(await authenticate("worker", "workerpw1", "admin")).toBeNull();
+  });
+});
+
+describe("หัวหน้า (manager)", () => {
+  test("มีได้บัญชีเดียว (สร้างพร้อมกันสองบัญชี สำเร็จรายเดียว) และล็อกอินได้เฉพาะ role manager", async () => {
+    const mk = (username: string) => createUser({ role: "manager", username, password: "mgrpass1", name: "Head", department: "", contact: "" });
+    const results = await Promise.allSettled([mk("head.a"), mk("head.b")]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(rejected.reason).toBeInstanceOf(ManagerExistsError);
+    await expect(mk("head.c")).rejects.toBeInstanceOf(ManagerExistsError);
+    const ok = results.find((r) => r.status === "fulfilled") as PromiseFulfilledResult<{ username: string }>;
+    expect((await authenticate(ok.value.username, "mgrpass1", "manager"))?.role).toBe("manager");
+    expect(await authenticate(ok.value.username, "mgrpass1")).toBeNull(); // ไม่ใช่ staff
+    expect(await authenticate(ok.value.username, "mgrpass1", "admin")).toBeNull();
   });
 });
 

@@ -27,6 +27,7 @@ const ERRORS: Record<string, MsgKey> = {
   name_required: "errNameRequired",
   department_required: "errDeptRequired",
   storage_error: "uNoDb",
+  manager_exists: "errManagerExists",
   cannot_delete_self: "uCannotDeleteSelf",
 };
 
@@ -51,7 +52,7 @@ function Console({ user }: { user: AdminUser }) {
   const [users, setUsers] = useState<UserListItem[] | null>(null);
   const [loadErr, setLoadErr] = useState(false);
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState<"staff" | "admin">("staff");
+  const [tab, setTab] = useState<"staff" | "admin" | "manager">("staff");
   const [editing, setEditing] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -99,7 +100,7 @@ function Console({ user }: { user: AdminUser }) {
             />
           </div>
           <div className="mt-3 flex gap-1 rounded-lg bg-stone-100 p-1 text-sm font-semibold" role="tablist">
-            {(["staff", "admin"] as const).map((k) => (
+            {(["staff", "admin", "manager"] as const).map((k) => (
               <button
                 key={k}
                 type="button"
@@ -108,7 +109,7 @@ function Console({ user }: { user: AdminUser }) {
                 onClick={() => setTab(k)}
                 className={`flex-1 rounded-md px-3 py-1.5 transition ${tab === k ? "bg-white text-deep-800 shadow-sm" : "text-stone-600 hover:text-deep-800"}`}
               >
-                {k === "staff" ? t("uTabStaff") : t("uTabAdmin")}
+                {k === "staff" ? t("uTabStaff") : k === "admin" ? t("uTabAdmin") : t("uTabManager")}
               </button>
             ))}
           </div>
@@ -142,7 +143,7 @@ function Console({ user }: { user: AdminUser }) {
                         {u.name} <span className="font-normal text-stone-500">· {u.username}</span>
                       </div>
                       <div className="truncate text-xs text-stone-500">
-                        {[u.role === "admin" ? t("uBadgeAdmin") : dept(u.department), u.contact].filter(Boolean).join(" · ")}
+                        {[u.role === "staff" ? dept(u.department) : u.role === "admin" ? t("uBadgeAdmin") : t("uTabManager"), u.contact].filter(Boolean).join(" · ")}
                         {u.createdAt ? ` · ${t("uCreatedAt")} ${new Date(u.createdAt * 1000).toLocaleDateString("en-GB")}` : ""}
                       </div>
                     </div>
@@ -216,7 +217,9 @@ function CreateForm({ onCreated }: { onCreated: (name: string) => void }) {
         <select value={f.role} onChange={(e) => set("role")(e.target.value)} className={field}>
           <option value="staff">{t("uRoleStaff")}</option>
           <option value="admin">{t("uRoleAdmin")}</option>
+          <option value="manager">{t("uRoleManager")}</option>
         </select>
+        {f.role === "manager" && <span className="mt-1 block text-xs font-normal text-stone-500">{t("uManagerHint")}</span>}
         {f.role === "admin" && <span className="mt-1 block text-xs font-normal text-stone-500">{t("uAdminHint")}</span>}
       </label>
       <label className="block text-sm font-medium">

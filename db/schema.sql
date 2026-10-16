@@ -103,7 +103,7 @@ CREATE INDEX IF NOT EXISTS report_files_report_idx ON report_files (report_id, i
 CREATE TABLE IF NOT EXISTS app_users (
   id            BIGSERIAL PRIMARY KEY,
   username      TEXT NOT NULL UNIQUE,                  -- ตัวพิมพ์เล็ก
-  role          TEXT NOT NULL DEFAULT 'staff',         -- staff = พนักงาน (/login) | admin = แอดมินในระบบเอง (/admin)
+  role          TEXT NOT NULL DEFAULT 'staff',         -- staff = พนักงาน (/login) | admin = แอดมินในระบบเอง (/admin) | manager = หัวหน้า (/manager)
   password_hash TEXT NOT NULL,                         -- scrypt$<salt hex>$<hash hex>
   name          TEXT NOT NULL,
   department    TEXT NOT NULL,                         -- id แผนก (ดู src/lib/categories.ts)
@@ -111,3 +111,5 @@ CREATE TABLE IF NOT EXISTS app_users (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'staff';
+-- หัวหน้าโรงแรม (role manager) มีได้บัญชีเดียว — ดู /manager
+CREATE UNIQUE INDEX IF NOT EXISTS app_users_one_manager ON app_users ((1)) WHERE role = 'manager';
