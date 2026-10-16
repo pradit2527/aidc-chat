@@ -12,6 +12,8 @@ export type User = {
   department: string;
   contact: string;
 };
+/** ผู้ใช้สำหรับรายการในหน้าแอดมิน (เพิ่มวันที่สร้าง, epoch วินาที) */
+export type UserListItem = User & { createdAt: number };
 type UserRow = User & { passwordHash: string };
 
 export const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
@@ -74,7 +76,7 @@ function ensureTable(): Promise<void> {
   return ensured;
 }
 
-type DbRow = { id: string; username: string; password_hash: string; name: string; department: string; contact: string };
+type DbRow = { id: string; username: string; password_hash: string; name: string; department: string; contact: string; created_at?: string | Date };
 const fromDb = (r: DbRow): UserRow => ({
   id: Number(r.id),
   username: r.username,
@@ -143,4 +145,65 @@ export async function getUserById(id: number): Promise<User | null> {
   }
   const u = (await readFileStore()).users.find((x) => x.id === id);
   return u ? strip(u) : null;
+}
+
+// ---------- จัดการโดยแอดมิน ----------
+const toSec = (v: string | Date | undefined) => (v ? Math.floor(new Date(v).getTime() / 1000) : 0);
+
+export async function listUsers(): Promise<UserListItem[]> {
+  if (dbEnabled) {
+    await ensureTable();
+    const r = await q<DbRow>("SELECT * FROM app_users ORDER BY created_at DESC, id DESC");
+    return r.map((x) => ({ ...strip(fromDb(x)), createdAt: toSec(x.created_at) }));
+  }
+  return (await readFileStore()).users
+    .map((u) => ({ ...strip(u), createdAt: toSec(u.createdAt) }))
+    .sort((a, b) => b.id - a.id);
+}
+
+export type UserPatch = { name: string; department: string; contact: string; password?: string };
+
+/** แก้ชื่อ/แผนก/เบอร์ต่อ และ (ถ้าส่ง password) ตั้งรหัสผ่านใหม่ — คืน null ถ้าไม่พบผู้ใช้ */
+export async function updateUser(id: number, patch: UserPatch): Promise<User | null> {
+  const passwordHash = patch.password ? await hashPassword(patch.password) : null;
+  if (dbEnabled) {
+    await ensureTable();
+    const r = await q<DbRow>(
+      `UPDATE app_users SET name=$2, department=$3, contact=$4, password_hash=COALESCE($5, password_hash)
+       WHERE id=$1 RETURNING *`,
+      [id, patch.name, patch.department, patch.contact, passwordHash],
+    );
+    return r[0] ? strip(fromDb(r[0])) : null;
+  }
+  const run = chain.then(async () => {
+    const d = await readFileStore();
+    const u = d.users.find((x) => x.id === id);
+    if (!u) return null;
+    u.name = patch.name;
+    u.department = patch.department;
+    u.contact = patch.contact;
+    if (passwordHash) u.passwordHash = passwordHash;
+    await writeFileStore(d);
+    return strip(u);
+  });
+  chain = run.catch(() => undefined);
+  return run;
+}
+
+/** ลบบัญชี — คุกกี้เซสชันที่ค้างอยู่ใช้ไม่ได้ทันที (getUserById ไม่พบ) */
+export async function deleteUser(id: number): Promise<boolean> {
+  if (dbEnabled) {
+    await ensureTable();
+    return (await q("DELETE FROM app_users WHERE id=$1 RETURNING id", [id])).length > 0;
+  }
+  const run = chain.then(async () => {
+    const d = await readFileStore();
+    const n = d.users.length;
+    d.users = d.users.filter((x) => x.id !== id);
+    if (d.users.length === n) return false;
+    await writeFileStore(d);
+    return true;
+  });
+  chain = run.catch(() => undefined);
+  return run;
 }

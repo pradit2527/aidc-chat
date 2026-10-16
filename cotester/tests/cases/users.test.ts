@@ -13,7 +13,10 @@ import {
   authenticate,
   createUser,
   getUserById,
+  deleteUser,
   hashPassword,
+  listUsers,
+  updateUser,
   UsernameTakenError,
   USERNAME_RE,
   verifyPassword,
@@ -54,6 +57,31 @@ describe("ผู้ใช้ (ที่เก็บแบบไฟล์)", () =
   test("รูปแบบ username", () => {
     for (const ok of ["abc", "a.b-c_1", "user123"]) expect(USERNAME_RE.test(ok)).toBe(true);
     for (const bad of ["ab", "A B", "-abc", "ຊື່ລາວ", "a".repeat(33)]) expect(USERNAME_RE.test(bad)).toBe(false);
+  });
+});
+
+describe("จัดการโดยแอดมิน (ไฟล์)", () => {
+  test("listUsers ไม่มีรหัสผ่าน และเรียงใหม่สุดก่อน", async () => {
+    const list = await listUsers();
+    expect(list.length).toBeGreaterThanOrEqual(2);
+    expect(list[0].id).toBeGreaterThan(list[list.length - 1].id);
+    expect(JSON.stringify(list)).not.toMatch(/scrypt|passwordHash/);
+    expect(list[0].createdAt).toBeGreaterThan(0);
+  });
+  test("updateUser แก้ข้อมูล; ไม่ส่ง password = รหัสเดิมใช้ได้; ส่ง = รหัสเดิมใช้ไม่ได้", async () => {
+    const u = await updateUser(1, { name: "Somchai 2", department: "sales", contact: "" });
+    expect(u).toMatchObject({ id: 1, name: "Somchai 2", department: "sales" });
+    expect(await authenticate("somchai", "secret1")).not.toBeNull();
+    await updateUser(1, { name: "Somchai 2", department: "sales", contact: "", password: "changed-9" });
+    expect(await authenticate("somchai", "secret1")).toBeNull();
+    expect(await authenticate("somchai", "changed-9")).not.toBeNull();
+    expect(await updateUser(999, { name: "x", department: "sales", contact: "" })).toBeNull();
+  });
+  test("deleteUser ลบแล้วล็อกอิน/ค้นหาไม่ได้; ลบซ้ำ = false", async () => {
+    expect(await deleteUser(1)).toBe(true);
+    expect(await getUserById(1)).toBeNull();
+    expect(await authenticate("somchai", "changed-9")).toBeNull();
+    expect(await deleteUser(1)).toBe(false);
   });
 });
 

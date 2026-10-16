@@ -65,6 +65,9 @@ export function AdminHeader(props: Props) {
                 </span>
               </a>
             )}
+            <a href="/admin/users" className={pill}>
+              {t("admUsers")}
+            </a>
             <a href="/admin/stats" className={pill}>
               {t("admStats")}
             </a>

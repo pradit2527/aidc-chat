@@ -1,6 +1,6 @@
 // งานแจ้งปัญหาแบบรายการ ครบวงจร: พนักงานส่ง → ดูสถานะ → ไอทีรับงาน/ติ๊กข้อ/ปิดงาน → เลขตั๋วใช้ชุดเดียวกับเคสแชท
 import { neon } from "@neondatabase/serverless";
-import { BASE, Client } from "./client";
+import { BASE, Client, staffLogin } from "./client";
 
 const DB = process.env.E2E_DATABASE_URL ?? "";
 if (!DB) throw new Error("ต้องตั้ง E2E_DATABASE_URL (รันผ่าน npm run test:e2e)");
@@ -35,8 +35,9 @@ let reportId = 0;
 
 beforeAll(async () => {
   await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters, app_users RESTART IDENTITY");
-  const reg = await staff.post("/api/auth/register", { username: "report.tester", password: "e2e-pass-1", name: "Report Tester", department: "housekeeping", contact: "205" });
-  identifier = (reg.json as { profile: { identifier: string } }).profile.identifier;
+  const s = await staffLogin({ username: "report.tester", password: "e2e-pass-1", name: "Report Tester", department: "housekeeping", contact: "205" });
+  staff.setCookie("cosi_user", s.staff.cookie("cosi_user") ?? "");
+  identifier = s.profile.identifier;
 });
 afterAll(async () => {
   await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters, app_users RESTART IDENTITY");

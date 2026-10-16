@@ -1,15 +1,14 @@
 // ฝั่งสาธารณะ: หน้าเว็บ, health, ล็อกอิน/ลงทะเบียนพนักงาน, ภาษา, และการป้องกันข้อมูลลับ — ไม่ต้องล็อกอิน
 import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { BASE, Client } from "./client";
+import { adminCreateUser, BASE, Client, staffLogin } from "./client";
 
 const c = new Client();
 // พนักงานที่ลงทะเบียน+ล็อกอินแล้ว (หน้า /start /chat /report ต้องล็อกอิน)
-const u = new Client();
+let u = new Client();
 const USERNAME = `e2e.${randomBytes(4).toString("hex")}`;
 beforeAll(async () => {
-  const r = await u.post("/api/auth/register", { username: USERNAME, password: "e2e-pass-1", name: "Test Staff", department: "front-office", contact: "101" });
-  if (r.status !== 201) throw new Error(`ลงทะเบียนผู้ใช้ทดสอบไม่สำเร็จ: ${r.status} ${r.text}`);
+  u = (await staffLogin({ username: USERNAME, password: "e2e-pass-1", name: "Test Staff", department: "front-office", contact: "101" })).staff;
 });
 const envLocal = (() => {
   try {
@@ -133,14 +132,26 @@ describe("หน้าเว็บสาธารณะ", () => {
   });
 });
 
-describe("ลงทะเบียน / ล็อกอินพนักงาน (/api/auth/*)", () => {
+describe("บัญชีพนักงาน: แอดมินสร้าง → พนักงานล็อกอิน (/api/admin/users, /api/auth/*)", () => {
   const body = { password: "e2e-pass-1", name: "Auth Staff", department: "front-office", contact: "101" };
   const name = `auth.${randomBytes(4).toString("hex")}`;
+  const admin = new Client();
+  let id = 0;
 
-  test("ลงทะเบียน → ได้ identifier + HMAC ที่ตรงกับ token ของเซิร์ฟเวอร์ และตั้งคุกกี้เซสชัน", async () => {
+  test("ไม่ล็อกอินแอดมิน → /api/admin/users 401; ไม่มี /api/auth/register ให้ลงทะเบียนเอง", async () => {
+    expect((await c.get("/api/admin/users")).status).toBe(401);
+    expect((await c.post("/api/admin/users", { username: name, ...body })).status).toBe(401);
+    expect([404, 405]).toContain((await c.post("/api/auth/register", { username: name, ...body })).status);
+    expect((await c.get("/register")).status).toBe(404);
+  });
+  test("แอดมินสร้างบัญชี → 201; พนักงานล็อกอิน → identifier + HMAC ที่ตรงกับ token ของเซิร์ฟเวอร์", async () => {
+    const { res } = await adminCreateUser({ username: name, ...body }, admin);
+    expect(res.status).toBe(201);
+    id = (res.json as { user: { id: number } }).user.id;
+    expect(res.text).not.toContain("password");
     const k = new Client();
-    const r = await k.post("/api/auth/register", { username: name, ...body });
-    expect(r.status).toBe(201);
+    const r = await k.post("/api/auth/login", { username: name, password: body.password });
+    expect(r.status).toBe(200);
     const j = (r.json as { profile: Record<string, string> }).profile;
     expect(j.identifier).toMatch(/^cosi_[0-9a-f]{24}$/);
     expect(j.departmentLabel).toBe("Front Office");
@@ -151,31 +162,49 @@ describe("ลงทะเบียน / ล็อกอินพนักงา�
       expect(j.identifierHash).toMatch(/^[0-9a-f]{64}$/);
     }
   });
-  test("username ซ้ำ (ไม่สนตัวพิมพ์) → 409, รหัสผ่านสั้น/username ผิดรูปแบบ/ขาดชื่อ/แผนกผิด → 400", async () => {
-    expect((await c.post("/api/auth/register", { username: name.toUpperCase(), ...body })).status).toBe(409);
-    expect((await c.post("/api/auth/register", { username: "ok.user", ...body, password: "123" })).json).toEqual({ error: "password_invalid" });
-    expect((await c.post("/api/auth/register", { username: "A B", ...body })).json).toEqual({ error: "username_invalid" });
-    expect((await c.post("/api/auth/register", { username: "ok.user", ...body, name: " " })).json).toEqual({ error: "name_required" });
-    expect((await c.post("/api/auth/register", { username: "ok.user", ...body, department: "nope" })).json).toEqual({ error: "department_required" });
+  test("username ซ้ำ (ไม่สนตัวพิมพ์) → 409, ข้อมูลไม่ครบ/ผิดรูปแบบ → 400, ข้ามต้นทาง → 403", async () => {
+    const post = (b: object, origin?: string | null) => admin.post("/api/admin/users", b, origin === undefined ? {} : { origin });
+    expect((await post({ username: name.toUpperCase(), ...body })).status).toBe(409);
+    expect((await post({ username: "ok.user", ...body, password: "123" })).json).toEqual({ error: "password_invalid" });
+    expect((await post({ username: "A B", ...body })).json).toEqual({ error: "username_invalid" });
+    expect((await post({ username: "ok.user", ...body, name: " " })).json).toEqual({ error: "name_required" });
+    expect((await post({ username: "ok.user", ...body, department: "nope" })).json).toEqual({ error: "department_required" });
+    expect((await post({ username: "ok.user", ...body }, "http://evil.test")).status).toBe(403);
   });
-  test("ล็อกอินด้วยรหัสผ่านถูก → 200 + คุกกี้; ผิด/ไม่มีผู้ใช้ → 401 ข้อความเดียวกัน", async () => {
-    const k = new Client();
-    expect((await k.post("/api/auth/login", { username: name, password: body.password })).status).toBe(200);
-    expect(k.cookie("cosi_user")).toBeTruthy();
+  test("รายการผู้ใช้ไม่มีรหัสผ่าน; แก้ไข/รีเซ็ตรหัสผ่านแล้วรหัสเก่าใช้ไม่ได้", async () => {
+    const list = await admin.get("/api/admin/users");
+    expect(list.status).toBe(200);
+    expect(list.text).not.toMatch(/password|scrypt/i);
+    expect((list.json as { users: { username: string }[] }).users.map((x) => x.username)).toContain(name);
+    const up = await admin.req(`/api/admin/users/${id}`, { method: "PATCH", json: { name: "Auth Staff 2", department: "sales", contact: "", password: "new-pass-22" } });
+    expect(up.status).toBe(200);
+    expect((await new Client().post("/api/auth/login", { username: name, password: body.password })).status).toBe(401);
+    expect((await new Client().post("/api/auth/login", { username: name, password: "new-pass-22" })).status).toBe(200);
+  });
+  test("ล็อกอิน: รหัสผิด/ไม่มีผู้ใช้ → 401 ข้อความเดียวกัน; ออกจากระบบ → /start เด้งกลับ /login", async () => {
     const bad = await c.post("/api/auth/login", { username: name, password: "wrong-pass" });
     const none = await c.post("/api/auth/login", { username: "nobody.here", password: "wrong-pass" });
     expect(bad.status).toBe(401);
-    expect(none.status).toBe(401);
     expect(bad.json).toEqual(none.json);
-  });
-  test("ออกจากระบบ → ลบคุกกี้ แล้ว /start เด้งกลับ /login; ข้ามต้นทาง → 403", async () => {
     const k = new Client();
-    await k.post("/api/auth/login", { username: name, password: body.password });
+    await k.post("/api/auth/login", { username: name, password: "new-pass-22" });
     expect((await k.get("/start")).status).toBe(200);
     await k.post("/api/auth/logout", {});
-    expect(k.cookie("cosi_user")).toBeUndefined();
     expect((await k.get("/start")).status).toBe(307);
-    expect((await c.post("/api/auth/login", { username: name, password: body.password }, { origin: "http://evil.test" })).status).toBe(403);
+  });
+  test("แอดมินลบบัญชี → คุกกี้เดิมใช้ไม่ได้ทันที และล็อกอินไม่ได้อีก", async () => {
+    const k = new Client();
+    await k.post("/api/auth/login", { username: name, password: "new-pass-22" });
+    expect((await admin.req(`/api/admin/users/${id}`, { method: "DELETE" })).status).toBe(200);
+    expect((await k.get("/start")).status).toBe(307);
+    expect((await new Client().post("/api/auth/login", { username: name, password: "new-pass-22" })).status).toBe(401);
+    expect((await admin.req(`/api/admin/users/${id}`, { method: "DELETE" })).status).toBe(404);
+  });
+  test("/admin/users ต้องล็อกอินแอดมิน (ไม่งั้นเด้ง /admin)", async () => {
+    const r = await c.get("/admin/users");
+    expect([301, 302, 307, 308]).toContain(r.status);
+    expect(r.redirect).toContain("/admin");
+    expect((await admin.get("/admin/users")).status).toBe(200);
   });
 });
 

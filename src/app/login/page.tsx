@@ -18,5 +18,5 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const dest = safeNext(next);
   if (await getCurrentUser()) redirect(dest); // ล็อกอินค้างอยู่แล้ว ไม่ต้องกรอกซ้ำ
   const saved = jar.get(LANG_COOKIE)?.value;
-  return <AuthForm mode="login" next={dest} initialLang={isLang(saved) ? saved : DEFAULT_LANG} />;
+  return <AuthForm next={dest} initialLang={isLang(saved) ? saved : DEFAULT_LANG} />;
 }

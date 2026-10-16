@@ -52,10 +52,11 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
       <AdminHeader user={user} title={t("ahTitle")} subtitle={t("ahSub", { name: user.name })} hideHome onSignedOut={onSignedOut} />
 
       <main className="relative z-10 mx-auto -mt-8 grid max-w-6xl gap-4 px-4 pb-10">
-        {/* สองเมนูหลัก */}
-        <div className="grid gap-4 sm:grid-cols-2">
+        {/* เมนูหลัก */}
+        <div className="grid gap-4 sm:grid-cols-3">
           <Choice href="/admin/chat" n={1} icon="chat" title={t("ahChat")} hint={t("ahChatHint")} badge={waiting} badgeLabel={t("ahWaiting")} cta={t("hubGo")} />
           <Choice href="/admin/reports" n={2} icon="clipboard" title={t("ahReports")} hint={t("ahReportsHint")} badge={newReports} badgeLabel={t("rcTabNew")} cta={t("hubGo")} />
+          <Choice href="/admin/users" n={3} icon="user" title={t("admUsers")} hint={t("ahUsersHint")} cta={t("hubGo")} />
         </div>
 
         {error && (
@@ -176,11 +177,11 @@ function Choice({
 }: {
   href: string;
   n: number;
-  icon: "chat" | "clipboard";
+  icon: "chat" | "clipboard" | "user";
   title: string;
   hint: string;
-  badge: number;
-  badgeLabel: string;
+  badge?: number;
+  badgeLabel?: string;
   cta: string;
 }) {
   return (
@@ -190,7 +191,7 @@ function Choice({
           <Icon name={icon} className="h-6 w-6" />
         </span>
         <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-500 text-xs font-bold text-white">{n}</span>
-        {badge > 0 && (
+        {badge !== undefined && badge > 0 && (
           <span className="ml-auto flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-100">
             <span className="unread-badge inline-grid h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white">{badge}</span>
             {badgeLabel}

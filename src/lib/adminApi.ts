@@ -51,6 +51,17 @@ export async function adminRoute(
   }
 }
 
+/** ตรวจเซสชันแอดมิน (+ CSRF เมื่อแก้ข้อมูล) สำหรับ route ที่ต้องควบคุมสถานะ/ข้อผิดพลาดเอง — ผ่าน = คืน Session, ไม่ผ่าน = คืน Response ให้ส่งกลับ */
+export async function adminGuard(req: Request, mutating = false): Promise<Session | Response> {
+  if (mutating && !sameOrigin(req)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  try {
+    const s = await getSession();
+    return s ?? NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  } catch {
+    return NextResponse.json({ error: "server_not_configured" }, { status: 500 });
+  }
+}
+
 /** จำกัดจำนวนครั้งล็อกอินต่อ IP (ในหน่วยความจำ — พอสำหรับ instance เดียว) */
 const attempts = new Map<string, { n: number; reset: number }>();
 export function loginAllowed(ip: string): boolean {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loginAllowed, rateLimit, sameOrigin } from "@/lib/adminApi";
+import { rateLimit, sameOrigin } from "@/lib/adminApi";
 import { clientIp, serverNotConfigured, signedIn, str } from "@/lib/authApi";
 import { authenticate, normalizeUsername, PASSWORD_MAX } from "@/lib/users";
 
@@ -7,7 +7,7 @@ import { authenticate, normalizeUsername, PASSWORD_MAX } from "@/lib/users";
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (serverNotConfigured()) return NextResponse.json({ error: "server_not_configured" }, { status: 500 });
-  if (!loginAllowed(clientIp(req))) return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
+  if (!rateLimit(`login-ip:${clientIp(req)}`, 40)) return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
 
   const body = (await req.json().catch(() => null)) as { username?: unknown; password?: unknown } | null;
   const username = normalizeUsername(str(body?.username, 40));
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_credentials" }, { status: 400 });
   }
   // จำกัดต่อ username ด้วย กันเดารหัสผ่านจากหลาย IP
-  if (!rateLimit(`login:${username}`, 8)) return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
+  if (!rateLimit(`login:${username}`, 12)) return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
 
   try {
     const user = await authenticate(username, password);

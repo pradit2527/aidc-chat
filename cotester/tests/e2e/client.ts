@@ -67,3 +67,22 @@ export async function waitFor<T>(fn: () => Promise<T>, ok: (v: T) => boolean, ti
   }
   return last;
 }
+
+const MOCK_ADMIN = { email: "it.test@example.invalid", password: "mock-only-password" };
+
+/** แอดมิน (Chatwoot จำลอง) ล็อกอินแล้วสร้างบัญชีพนักงาน คืน Client ของแอดมิน + ผลสร้าง */
+export async function adminCreateUser(fields: Record<string, unknown>, admin = new Client()) {
+  if (!admin.cookie("cosi_admin")) await admin.post("/api/admin/login", MOCK_ADMIN);
+  const res = await admin.post("/api/admin/users", fields);
+  return { admin, res };
+}
+
+/** สร้างบัญชีพนักงานผ่านแอดมิน แล้วล็อกอินด้วยบัญชีนั้น — คืน Client ของพนักงาน (มีคุกกี้ cosi_user) + profile */
+export async function staffLogin(fields: { username: string; password: string; name: string; department: string; contact?: string }) {
+  const { res } = await adminCreateUser({ contact: "", ...fields });
+  if (res.status !== 201) throw new Error(`สร้างผู้ใช้ทดสอบไม่สำเร็จ: ${res.status} ${res.text}`);
+  const staff = new Client();
+  const login = await staff.post("/api/auth/login", { username: fields.username, password: fields.password });
+  if (login.status !== 200) throw new Error(`ล็อกอินผู้ใช้ทดสอบไม่สำเร็จ: ${login.status}`);
+  return { staff, profile: (login.json as { profile: Record<string, string> }).profile };
+}
