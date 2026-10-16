@@ -14,7 +14,10 @@ ssh -o BatchMode=yes "$HOST" "test -f $DIR/.env.production" \
   || { echo "x ไม่พบ $DIR/.env.production บนเซิร์ฟเวอร์ — สร้างก่อน (README → Deploy บนเซิร์ฟเวอร์ภายใน)"; exit 1; }
 
 echo "-> ส่งโค้ด (git archive HEAD) ไป $HOST:$DIR"
-git archive --format=tar HEAD | ssh -o BatchMode=yes "$HOST" "mkdir -p $DIR && tar -xf - -C $DIR"
+# ล้างโฟลเดอร์ซอร์สที่ git ติดตามก่อนแตกไฟล์ — ไม่งั้นไฟล์ที่ถูกลบ/ย้ายใน git จะค้างบนเซิร์ฟเวอร์แล้ว build พัง
+# (ไม่แตะ .env.production และ data/ ซึ่งเป็นข้อมูลของเซิร์ฟเวอร์)
+TRACKED_DIRS="$(git ls-files | grep / | cut -d/ -f1 | sort -u | tr '\n' ' ')"
+git archive --format=tar HEAD | ssh -o BatchMode=yes "$HOST" "mkdir -p $DIR && cd $DIR && rm -rf $TRACKED_DIRS && tar -xf -"
 
 echo "-> build image + restart container"
 ssh -o BatchMode=yes "$HOST" "cd $DIR && docker compose up -d --build --remove-orphans && docker compose ps"
