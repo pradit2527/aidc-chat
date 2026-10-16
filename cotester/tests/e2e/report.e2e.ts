@@ -34,22 +34,22 @@ let ticketNo = "";
 let reportId = 0;
 
 beforeAll(async () => {
-  await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
-  const id = (await staff.post("/api/identify", { name: "Report Tester", department: "housekeeping", contact: "205" })).json as { identifier: string };
-  identifier = id.identifier;
+  await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters, app_users RESTART IDENTITY");
+  const reg = await staff.post("/api/auth/register", { username: "report.tester", password: "e2e-pass-1", name: "Report Tester", department: "housekeeping", contact: "205" });
+  identifier = (reg.json as { profile: { identifier: string } }).profile.identifier;
 });
 afterAll(async () => {
-  await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters RESTART IDENTITY");
+  await q("TRUNCATE report_files, reports, report_items, report_events, tickets, ticket_events, ticket_counters, app_users RESTART IDENTITY");
 });
 
 describe("หน้าพนักงาน", () => {
-  test("/start = หน้าหลักเลือกบริการ (แชท / แจ้งปัญหา) และ QR ที่ / ชี้ไป /start", async () => {
+  test("/start = หน้าหลักเลือกบริการ (แชท / แจ้งปัญหา) และ QR ที่ / ชี้ไป /login", async () => {
     const r = await staff.get("/start");
     expect(r.status).toBe(200);
     expect(r.text).toContain("ລະບົບການແຈ້ງບັນຫາ");
     expect(r.text).toContain('href="/chat"');
     expect(r.text).toContain('href="/report"');
-    expect((await staff.get("/")).text).toMatch(/https?:\/\/[^"<]+\/start/); // บน localhost โปสเตอร์ใช้ IP ของเครื่องแทน
+    expect((await staff.get("/")).text).toMatch(/https?:\/\/[^"<]+\/login/); // บน localhost โปสเตอร์ใช้ IP ของเครื่องแทน
   });
   test("/report แสดงฟอร์มแจ้งปัญหา (หัวข้อ 7 รายการ)", async () => {
     const r = await staff.get("/report");

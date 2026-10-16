@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import ReportForm from "@/components/ReportForm";
+import SyncProfile from "@/components/SyncProfile";
+import { requireUser } from "@/lib/userSession";
 import { dbEnabled } from "@/lib/db";
 import { DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n";
 import { uploadsEnabled } from "@/lib/uploads";
@@ -14,6 +16,12 @@ export const metadata: Metadata = {
 
 /** แจ้งปัญหาแบบรายการ (ไม่ผ่านแชท) — ต้องมีฐานข้อมูล ไม่มี → ฟอร์มบอกให้ใช้แชทแทน */
 export default async function ReportPage() {
+  const { profile } = await requireUser("/report");
   const saved = (await cookies()).get(LANG_COOKIE)?.value;
-  return <ReportForm initialLang={isLang(saved) ? saved : DEFAULT_LANG} enabled={dbEnabled} uploads={await uploadsEnabled()} />;
+  return (
+    <>
+      <SyncProfile profile={profile} />
+      <ReportForm initialLang={isLang(saved) ? saved : DEFAULT_LANG} enabled={dbEnabled} uploads={await uploadsEnabled()} profile={profile} />
+    </>
+  );
 }

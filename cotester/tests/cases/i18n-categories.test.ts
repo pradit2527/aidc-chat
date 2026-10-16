@@ -17,7 +17,7 @@ describe("i18n", () => {
   test("ชื่อระบบตามที่ผู้ใช้กำหนด (ลาว) และคำแปลอังกฤษ", () => {
     expect(translate("lo", "heroTitle")).toBe("ລະບົບການແຈ້ງບັນຫາ");
     expect(translate("en", "heroTitle")).toBe("Problem Reporting System");
-    expect(translate("lo", "step1Title")).toBe("1. ກະລຸນາກອກຂໍ້ມູນ");
+    expect(translate("lo", "step1Title")).toBe("1. ຜູ້ໃຊ້ງານ");
     expect(translate("en", "admTitle")).toBe("Ticket Support");
     expect(translate("en", "admBrand")).toBe("IT Helpdesk");
   });

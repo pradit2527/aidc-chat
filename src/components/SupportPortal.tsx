@@ -1,23 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CATEGORIES, DEPARTMENTS, categoryLabel } from "@/lib/categories";
 import type { MsgKey } from "@/lib/i18n";
-import { getProfile, saveProfile, subscribeProfile } from "@/lib/profileStore";
-import {
-  identify,
-  loadChatwoot,
-  resetChatwoot,
-  setChatMeta,
-  setWidgetLocale,
-  type ChatwootSdk,
-  type Profile,
-} from "@/lib/widget";
+import { signOutUser } from "@/lib/signOut";
+import { identify, loadChatwoot, setChatMeta, setWidgetLocale, type ChatwootSdk, type Profile } from "@/lib/widget";
 import { StaffHeader } from "./StaffHeader";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
 
-type Props = { baseUrl: string; websiteToken: string; initialLang: "lo" | "en" };
+/** profile = ข้อมูลผู้ใช้ที่ล็อกอินอยู่ (ดึงจากบัญชี ไม่ต้องกรอกเอง) */
+type Props = { baseUrl: string; websiteToken: string; initialLang: "lo" | "en"; profile: Profile };
 
 export default function SupportPortal({ initialLang, ...rest }: Props) {
   return (
@@ -29,11 +22,8 @@ export default function SupportPortal({ initialLang, ...rest }: Props) {
 
 const HERO_STEPS: MsgKey[] = ["heroStep1", "heroStep2", "heroStep3"];
 
-function Portal({ baseUrl, websiteToken }: Omit<Props, "initialLang">) {
+function Portal({ baseUrl, websiteToken, profile }: Omit<Props, "initialLang">) {
   const { t, lang } = useI18n();
-  // undefined = ยังไม่ hydrate, null = ยังไม่เคยกรอกข้อมูล
-  const profile = useSyncExternalStore(subscribeProfile, getProfile, () => undefined);
-  const [editing, setEditing] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
   const [urgent, setUrgent] = useState(false);
   const [phase, setPhase] = useState<"idle" | "connecting" | "error">("idle");
@@ -53,17 +43,17 @@ function Portal({ baseUrl, websiteToken }: Omit<Props, "initialLang">) {
   }, [baseUrl, websiteToken]);
 
   useEffect(() => {
-    if (cw && profile) identify(cw, profile);
+    if (cw) identify(cw, profile);
   }, [cw, profile]);
 
   useEffect(() => {
     if (cw) setWidgetLocale(lang);
   }, [cw, lang]);
 
-  const ready = Boolean(profile) && !editing;
+  const ready = true;
 
   async function startChat() {
-    if (!profile || !category) return;
+    if (!category) return;
     setPhase("connecting");
     try {
       const sdk = cw ?? (await loadChatwoot({ baseUrl, websiteToken, lang }));
@@ -76,13 +66,6 @@ function Portal({ baseUrl, websiteToken }: Omit<Props, "initialLang">) {
     }
   }
 
-  function switchUser() {
-    resetChatwoot();
-    saveProfile(null);
-    setCategory(null);
-    setUrgent(false);
-    setEditing(false);
-  }
 
   const startDisabled = !ready || !category || !websiteToken || phase === "connecting";
   const startLabel = !category && ready ? t("pickTopicFirst") : phase === "connecting" ? t("connecting") : t("startChat");
@@ -97,40 +80,28 @@ function Portal({ baseUrl, websiteToken }: Omit<Props, "initialLang">) {
           {/* ขั้น 1: ผู้ใช้ */}
           <div>
             <h2 className="text-base font-semibold">{t("step1Title")}</h2>
-            {profile === undefined ? (
-              <div className="mt-3 h-14 animate-pulse rounded-xl bg-stone-100" />
-            ) : profile && !editing ? (
-              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-deep-50 px-4 py-3 ring-1 ring-deep-100">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-deep-700 text-white">
-                    <Icon name="user" className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold">{t("hello", { name: profile.name })}</div>
-                    <div className="truncate text-xs text-stone-500">
-                      {[
-                        DEPARTMENTS.find((d) => d.id === profile.department)?.label[lang] ?? profile.departmentLabel,
-                        profile.contact,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </div>
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-deep-50 px-4 py-3 ring-1 ring-deep-100">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-deep-700 text-white">
+                  <Icon name="user" className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">{t("hello", { name: profile.name })}</div>
+                  <div className="truncate text-xs text-stone-500">
+                    {[DEPARTMENTS.find((d) => d.id === profile.department)?.label[lang] ?? profile.departmentLabel, profile.contact]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={switchUser}
-                  className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-deep-700 hover:bg-deep-100"
-                >
-                  {t("switchUser")}
-                </button>
               </div>
-            ) : (
-              <ProfileForm
-                onDone={() => setEditing(false)}
-                onCancel={profile ? () => setEditing(false) : undefined}
-              />
-            )}
+              <button
+                type="button"
+                onClick={signOutUser}
+                className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-deep-700 hover:bg-deep-100"
+              >
+                {t("switchUser")}
+              </button>
+            </div>
           </div>
 
           {/* ขั้น 2: หัวข้อปัญหา */}
@@ -218,85 +189,5 @@ function Portal({ baseUrl, websiteToken }: Omit<Props, "initialLang">) {
 
       </main>
     </div>
-  );
-}
-
-export function ProfileForm({ onDone, onCancel }: { onDone: () => void; onCancel?: () => void }) {
-  const { t, lang } = useI18n();
-  const [name, setName] = useState("");
-  const [department, setDepartment] = useState("");
-  const [contact, setContact] = useState("");
-  const [error, setError] = useState<MsgKey | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return setError("errNameRequired");
-    if (!department) return setError("errDeptRequired");
-    setError(null);
-    setBusy(true);
-    try {
-      const r = await fetch("/api/identify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, department, contact }),
-      });
-      if (!r.ok) throw new Error(String(r.status));
-      saveProfile((await r.json()) as Profile);
-      onDone();
-    } catch {
-      setError("errSaveFailed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const field =
-    "mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-base outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200 md:py-2 md:text-sm";
-
-  return (
-    <form onSubmit={submit} className="mt-2 space-y-3">
-      <p className="text-sm text-stone-500">{t("step1Hint")}</p>
-      <label className="block text-sm font-medium">
-        {t("fieldName")}
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="name" className={field} />
-      </label>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-sm font-medium">
-          {t("fieldDept")}
-          <select value={department} onChange={(e) => setDepartment(e.target.value)} className={field}>
-            <option value="">{t("deptPlaceholder")}</option>
-            {DEPARTMENTS.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.label[lang]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm font-medium">
-          {t("fieldContact")}
-          <input value={contact} onChange={(e) => setContact(e.target.value)} maxLength={40} inputMode="tel" className={field} />
-        </label>
-      </div>
-      {error && (
-        <p role="alert" className="text-sm text-rose-600">
-          {t(error)}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-lg bg-deep-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-deep-800 disabled:opacity-60"
-        >
-          {busy ? t("saving") : t("saveProfile")}
-        </button>
-        {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-lg px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-100">
-            {t("cancel")}
-          </button>
-        )}
-      </div>
-    </form>
   );
 }

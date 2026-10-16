@@ -1,19 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState } from "react";
 import { CATEGORIES, DEPARTMENTS } from "@/lib/categories";
 import type { Lang } from "@/lib/i18n";
 import { addMyReport } from "@/lib/myReports";
-import { getProfile, saveProfile, subscribeProfile } from "@/lib/profileStore";
+import { signOutUser } from "@/lib/signOut";
 import { REPORT_LIMITS } from "@/lib/reports";
 import { UPLOAD_LIMITS, validateUpload, type FileKind } from "@/lib/uploadRules";
+import type { Profile } from "@/lib/widget";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
 import { StaffHeader } from "./StaffHeader";
-import { ProfileForm } from "./SupportPortal";
 
-type Props = { initialLang: Lang; enabled: boolean; uploads: boolean };
+type Props = { initialLang: Lang; enabled: boolean; uploads: boolean; profile: Profile };
 
 /** ไฟล์แนบในฟอร์ม: อัปโหลดทันทีที่เลือก แล้วเก็บ id+token ไว้ส่งพร้อมรายงาน */
 type Attachment = {
@@ -46,20 +46,18 @@ async function shrinkImage(file: File): Promise<Blob> {
 }
 
 /** แจ้งปัญหาแบบรายการ: เลือกหัวข้อ → พิมพ์ปัญหาเป็นข้อ ๆ → ส่งให้ทีมไอที (ไม่ผ่านแชท) */
-export default function ReportForm({ initialLang, enabled, uploads }: Props) {
+export default function ReportForm({ initialLang, enabled, uploads, profile }: Props) {
   return (
     <I18nProvider initial={initialLang}>
-      <Form enabled={enabled} uploads={uploads} />
+      <Form enabled={enabled} uploads={uploads} profile={profile} />
     </I18nProvider>
   );
 }
 
 type Items = Record<string, string[]>;
 
-function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
+function Form({ enabled, uploads, profile }: { enabled: boolean; uploads: boolean; profile: Profile }) {
   const { t, lang } = useI18n();
-  const profile = useSyncExternalStore(subscribeProfile, getProfile, () => undefined);
-  const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [items, setItems] = useState<Items>({});
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -72,7 +70,7 @@ function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
   const uploading = files.some((f) => f.status === "uploading");
 
   async function pickFiles(list: FileList | null) {
-    if (!list || !profile) return;
+    if (!list) return;
     setFileErr(null);
     const picked = Array.from(list);
     if (files.length + picked.length > UPLOAD_LIMITS.files) return setFileErr("rpAttachTooMany");
@@ -108,7 +106,7 @@ function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
     });
   }
 
-  const ready = Boolean(profile) && !editing;
+  const ready = true;
   const total = selected.reduce((n, id) => n + (items[id]?.length ?? 0), 0);
 
   function toggleTopic(id: string) {
@@ -137,14 +135,9 @@ function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
     setFiles([]);
     setFileErr(null);
   }
-  function switchUser() {
-    saveProfile(null);
-    reset();
-    setEditing(false);
-  }
 
   async function send() {
-    if (!profile || total === 0 || phase === "sending" || uploading) return;
+    if (total === 0 || phase === "sending" || uploading) return;
     setPhase("sending");
     const topics = selected.filter((id) => items[id]?.length).map((id) => ({ topic: id, items: items[id] }));
     try {
@@ -220,30 +213,24 @@ function Form({ enabled, uploads }: { enabled: boolean; uploads: boolean }) {
             {/* ขั้น 1: ผู้ใช้ (เหมือนหน้าแชท ใช้ข้อมูลชุดเดียวกัน) */}
             <div>
               <h2 className="text-base font-semibold">{t("step1Title")}</h2>
-              {profile === undefined ? (
-                <div className="mt-3 h-14 animate-pulse rounded-xl bg-stone-100" />
-              ) : profile && !editing ? (
-                <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-deep-50 px-4 py-3 ring-1 ring-deep-100">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-deep-700 text-white">
-                      <Icon name="user" className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold">{t("hello", { name: profile.name })}</div>
-                      <div className="truncate text-xs text-stone-500">
-                        {[DEPARTMENTS.find((d) => d.id === profile.department)?.label[lang] ?? profile.departmentLabel, profile.contact]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </div>
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-deep-50 px-4 py-3 ring-1 ring-deep-100">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-deep-700 text-white">
+                    <Icon name="user" className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{t("hello", { name: profile.name })}</div>
+                    <div className="truncate text-xs text-stone-500">
+                      {[DEPARTMENTS.find((d) => d.id === profile.department)?.label[lang] ?? profile.departmentLabel, profile.contact]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </div>
                   </div>
-                  <button type="button" onClick={switchUser} className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-deep-700 hover:bg-deep-100">
-                    {t("switchUser")}
-                  </button>
                 </div>
-              ) : (
-                <ProfileForm onDone={() => setEditing(false)} onCancel={profile ? () => setEditing(false) : undefined} />
-              )}
+                <button type="button" onClick={signOutUser} className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-deep-700 hover:bg-deep-100">
+                  {t("switchUser")}
+                </button>
+              </div>
             </div>
 
             {/* ขั้น 2: หัวข้อ + ข้อย่อย */}

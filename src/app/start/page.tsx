@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import StartHub from "@/components/StartHub";
+import SyncProfile from "@/components/SyncProfile";
+import { requireUser } from "@/lib/userSession";
 import { DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,12 @@ export const metadata: Metadata = {
 
 /** หน้าหลักของพนักงาน (ปลายทาง QR): เลือกระบบแชท หรือ แจ้งปัญหา */
 export default async function StartPage() {
+  const { profile } = await requireUser("/start");
   const saved = (await cookies()).get(LANG_COOKIE)?.value;
-  return <StartHub initialLang={isLang(saved) ? saved : DEFAULT_LANG} />;
+  return (
+    <>
+      <SyncProfile profile={profile} />
+      <StartHub initialLang={isLang(saved) ? saved : DEFAULT_LANG} profile={profile} />
+    </>
+  );
 }

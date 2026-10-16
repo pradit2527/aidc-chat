@@ -3,32 +3,59 @@
 import Link from "next/link";
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { fmtTime } from "@/lib/adminClient";
+import { DEPARTMENTS } from "@/lib/categories";
 import type { Lang } from "@/lib/i18n";
 import { emptyMyReports, readMyReports, subscribeMyReports } from "@/lib/myReports";
 import { getProfile, subscribeProfile } from "@/lib/profileStore";
 import type { OwnerReportRow, ReportStatus } from "@/lib/reports";
+import { signOutUser } from "@/lib/signOut";
 import { useLive } from "@/lib/useLive";
+import type { Profile } from "@/lib/widget";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
 import { StaffHeader } from "./StaffHeader";
 
 /** หน้าหลักของพนักงาน (ปลายทาง QR): เลือก "ระบบแชท" หรือ "แจ้งปัญหา" + รายงานของฉัน (สถานะ, ผู้รับเรื่อง, หน้าละ 30) */
-export default function StartHub({ initialLang }: { initialLang: Lang }) {
+export default function StartHub({ initialLang, profile }: { initialLang: Lang; profile: Profile }) {
   return (
     <I18nProvider initial={initialLang}>
-      <Hub />
+      <Hub profile={profile} />
     </I18nProvider>
   );
 }
 
 type MineRes = { enabled: boolean; reports: OwnerReportRow[]; total: number; page: number; pages: number };
 
-function Hub() {
-  const { t } = useI18n();
+function Hub({ profile }: { profile: Profile }) {
+  const { t, lang } = useI18n();
   return (
     <div className="min-h-screen">
       <StaffHeader title={t("hubTitle")} subtitle={t("hubSub")} steps={[t("hubChat"), t("hubReport")]} />
       <main className="relative z-10 mx-auto -mt-8 grid max-w-5xl gap-4 px-4 pb-10">
+        {/* ผู้ใช้ที่ล็อกอินอยู่ — ข้อมูลมาจากบัญชี ไม่ต้องกรอกเอง */}
+        <section className="card flex items-center justify-between gap-3 p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-deep-700 text-white">
+              <Icon name="user" className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold">{t("hello", { name: profile.name })}</div>
+              <div className="truncate text-xs text-stone-500">
+                {[DEPARTMENTS.find((d) => d.id === profile.department)?.label[lang] ?? profile.departmentLabel, profile.contact]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={signOutUser}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-deep-700 hover:bg-deep-100"
+          >
+            <Icon name="logout" className="h-4 w-4" />
+            {t("switchUser")}
+          </button>
+        </section>
         <div className="grid gap-4 sm:grid-cols-2">
           <Choice href="/chat" n={1} icon="chat" title={t("hubChat")} hint={t("hubChatHint")} cta={t("hubGo")} />
           <Choice href="/report" n={2} icon="clipboard" title={t("hubReport")} hint={t("hubReportHint")} cta={t("hubGo")} />

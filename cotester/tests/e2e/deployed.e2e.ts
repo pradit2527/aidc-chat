@@ -14,19 +14,21 @@ d(`ระบบที่ติดตั้งแล้ว: ${URL ?? "(ไม่�
   });
 
   test("หน้า /, /chat, /admin เปิดได้และไม่ขึ้นข้อความ 'ยังไม่ได้ตั้งค่า'", async () => {
-    for (const p of ["/", "/chat", "/admin"]) {
+    for (const p of ["/", "/login", "/admin"]) {
       const r = await c.get(p);
       expect(r.status).toBe(200);
       expect(r.text).not.toContain("ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ");
     }
-    expect((await c.get("/chat")).text).toContain("ລະບົບການແຈ້ງບັນຫາ");
     expect((await c.get("/admin")).text).toContain("IT Helpdesk");
   });
 
-  test("QR บนหน้าแรกชี้ไปหน้าหลักพนักงาน /start ของโฮสต์นี้ และ /start, /report เปิดได้", async () => {
-    expect((await c.get("/")).text).toContain(`${URL}/start`);
-    expect((await c.get("/start")).status).toBe(200);
-    expect((await c.get("/report")).status).toBe(200);
+  test("QR บนหน้าแรกชี้ไปหน้าล็อกอิน /login ของโฮสต์นี้ และ /start, /chat, /report เด้งไปล็อกอินเมื่อยังไม่ล็อกอิน", async () => {
+    expect((await c.get("/")).text).toContain(`${URL}/login`);
+    for (const p of ["/start", "/chat", "/report"]) {
+      const r = await c.get(p);
+      expect([301, 302, 307, 308]).toContain(r.status);
+      expect(r.redirect).toContain("/login");
+    }
   });
 
   test("API คอนโซลยังปิดสำหรับคนที่ไม่ล็อกอิน และสถิติเด้งไปหน้าล็อกอิน", async () => {
@@ -39,7 +41,7 @@ d(`ระบบที่ติดตั้งแล้ว: ${URL ?? "(ไม่�
 
   test("ตอบสนองภายใน 3 วินาที", async () => {
     const t = Date.now();
-    await c.get("/chat");
+    await c.get("/login");
     expect(Date.now() - t).toBeLessThan(3000);
   });
 });

@@ -105,7 +105,7 @@ npm run check:chatwoot       # ตรวจการเชื่อมต่อ
 
 ## 4. การทำงานของ widget
 
-1. พนักงานกรอกชื่อ + แผนก (+เบอร์ต่อ) ครั้งเดียว → `/api/identify` สร้าง identifier คงที่ + `identifier_hash`
+1. พนักงานลงทะเบียนครั้งเดียว (`/register`: username + รหัสผ่าน + ชื่อ + แผนก + เบอร์ต่อ) แล้วล็อกอินที่ `/login` → ระบบสร้าง identifier คงที่ต่อ username + `identifier_hash` จากบัญชี (ไม่ต้องกรอกชื่อซ้ำ)
 2. พอร์ทัลเรียก `$chatwoot.setUser(identifier, { name, company_name, description, identifier_hash })`
    ทีมไอทีจึงเห็นชื่อพนักงานและแผนกในรายการแชททันที
 3. เมื่อเริ่มแชท พอร์ทัลติด label หมวดปัญหา (+ `cosi-urgent`) และ conversation custom attributes

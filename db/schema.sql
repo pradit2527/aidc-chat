@@ -98,3 +98,14 @@ CREATE TABLE IF NOT EXISTS report_files (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS report_files_report_idx ON report_files (report_id, id);
+
+-- บัญชีผู้ใช้พนักงานโรงแรม (ล็อกอินหน้า /login) — รหัสผ่านเก็บเป็น scrypt hash เท่านั้น
+CREATE TABLE IF NOT EXISTS app_users (
+  id            BIGSERIAL PRIMARY KEY,
+  username      TEXT NOT NULL UNIQUE,                  -- ตัวพิมพ์เล็ก
+  password_hash TEXT NOT NULL,                         -- scrypt$<salt hex>$<hash hex>
+  name          TEXT NOT NULL,
+  department    TEXT NOT NULL,                         -- id แผนก (ดู src/lib/categories.ts)
+  contact       TEXT NOT NULL DEFAULT '',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);

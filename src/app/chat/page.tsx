@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import SupportPortal from "@/components/SupportPortal";
+import SyncProfile from "@/components/SyncProfile";
+import { requireUser } from "@/lib/userSession";
 import { chatwootConfig } from "@/lib/chatwoot";
 import { DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n";
 
@@ -13,10 +15,14 @@ export const metadata: Metadata = {
 
 /** หน้าแจ้งปัญหาของพนักงาน (ปลายทางของ QR) */
 export default async function ChatPage() {
+  const { profile } = await requireUser("/chat");
   const saved = (await cookies()).get(LANG_COOKIE)?.value;
   // ส่งเฉพาะค่าสาธารณะไปฝั่ง browser — hmacToken อยู่ที่เซิร์ฟเวอร์เท่านั้น
   const { baseUrl, websiteToken } = chatwootConfig();
   return (
-    <SupportPortal baseUrl={baseUrl} websiteToken={websiteToken} initialLang={isLang(saved) ? saved : DEFAULT_LANG} />
+    <>
+      <SyncProfile profile={profile} />
+      <SupportPortal baseUrl={baseUrl} websiteToken={websiteToken} initialLang={isLang(saved) ? saved : DEFAULT_LANG} profile={profile} />
+    </>
   );
 }
