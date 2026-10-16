@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   if ("error" in parsed) return NextResponse.json(parsed, { status: 400 });
   try {
     const user = await createUser(parsed);
-    console.info(`[admin/users] ${g.user.email} created user ${user.username}`);
+    console.info(`[admin/users] ${g.user.email} created ${user.role} ${user.username}`);
     return NextResponse.json({ user }, { status: 201 });
   } catch (e) {
     if (e instanceof UsernameTakenError) return NextResponse.json({ error: "username_taken" }, { status: 409 });

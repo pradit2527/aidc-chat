@@ -40,7 +40,7 @@ describe("รหัสผ่าน", () => {
 describe("ผู้ใช้ (ที่เก็บแบบไฟล์)", () => {
   test("สร้าง → ล็อกอินได้ (ไม่สนตัวพิมพ์ของ username) → ไม่คืน passwordHash", async () => {
     const u = await createUser(input);
-    expect(u).toEqual({ id: 1, username: "somchai", name: "Somchai", department: "front-office", contact: "101" });
+    expect(u).toEqual({ id: 1, username: "somchai", role: "staff", name: "Somchai", department: "front-office", contact: "101" });
     expect(await authenticate("SomChai", "secret1")).toEqual(u);
     expect(await getUserById(1)).toEqual(u);
   });
@@ -57,6 +57,19 @@ describe("ผู้ใช้ (ที่เก็บแบบไฟล์)", () =
   test("รูปแบบ username", () => {
     for (const ok of ["abc", "a.b-c_1", "user123"]) expect(USERNAME_RE.test(ok)).toBe(true);
     for (const bad of ["ab", "A B", "-abc", "ຊື່ລາວ", "a".repeat(33)]) expect(USERNAME_RE.test(bad)).toBe(false);
+  });
+});
+
+describe("บทบาท staff / admin", () => {
+  test("แอดมินในระบบเอง: ล็อกอินได้เฉพาะ role admin และพนักงานล็อกอินเป็นแอดมินไม่ได้ (และกลับกัน)", async () => {
+    const a = await createUser({ role: "admin", username: "boss", password: "adminpw1", name: "Boss", department: "", contact: "" });
+    expect(a.role).toBe("admin");
+    expect(await authenticate("boss", "adminpw1", "admin")).toEqual(a);
+    expect(await authenticate("boss", "adminpw1")).toBeNull(); // ไม่ใช่ staff
+    expect(await authenticate("boss", "wrong", "admin")).toBeNull();
+    const s = await createUser({ username: "worker", password: "workerpw1", name: "W", department: "sales", contact: "" });
+    expect(s.role).toBe("staff");
+    expect(await authenticate("worker", "workerpw1", "admin")).toBeNull();
   });
 });
 

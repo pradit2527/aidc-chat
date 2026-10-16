@@ -200,6 +200,19 @@ describe("บัญชีพนักงาน: แอดมินสร้า�
     expect((await new Client().post("/api/auth/login", { username: name, password: "new-pass-22" })).status).toBe(401);
     expect((await admin.req(`/api/admin/users/${id}`, { method: "DELETE" })).status).toBe(404);
   });
+  test("แอดมินบัญชีในระบบเอง (role admin): ล็อกอิน /admin ด้วย username ได้ ใช้ผู้ใช้/สถิติ/รายงานได้ แต่แชทถูกปิด และพนักงานล็อกอินเป็นแอดมินไม่ได้", async () => {
+    const adminName = `adm.${randomBytes(4).toString("hex")}`;
+    expect((await adminCreateUser({ role: "admin", username: adminName, password: "adm-pass-1", name: "Local Admin" }, admin)).res.status).toBe(201);
+    const a = new Client();
+    expect((await a.post("/api/admin/login", { email: adminName, password: "adm-pass-1" })).status).toBe(200);
+    expect((await a.post("/api/admin/login", { email: adminName, password: "bad" })).status).toBe(401);
+    for (const p of ["/api/admin/users", "/api/admin/stats", "/api/admin/reports"]) expect((await a.get(p)).status).toBe(200);
+    expect((await a.get("/api/admin/conversations")).status).toBe(403);
+    const chat = await a.get("/admin/chat");
+    expect([301, 302, 307, 308]).toContain(chat.status);
+    expect((await new Client().post("/api/auth/login", { username: adminName, password: "adm-pass-1" })).status).toBe(401);
+    expect((await new Client().post("/api/admin/login", { email: name, password: "new-pass-22" })).status).toBe(401); // พนักงานเข้าแอดมินไม่ได้
+  });
   test("/admin/users ต้องล็อกอินแอดมิน (ไม่งั้นเด้ง /admin)", async () => {
     const r = await c.get("/admin/users");
     expect([301, 302, 307, 308]).toContain(r.status);

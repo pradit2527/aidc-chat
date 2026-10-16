@@ -111,10 +111,12 @@ function Login({ onDone }: { onDone: (u: AdminUser) => void }) {
           <label className="block text-sm font-medium">
             {t("admEmail")}
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
               required
               className={field}
             />

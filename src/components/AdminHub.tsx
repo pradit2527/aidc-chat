@@ -27,7 +27,7 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
   const load = useCallback(async () => {
     try {
       const [c, rNew, rProg] = await Promise.all([
-        api<{ conversations: ConversationDTO[] }>("/api/admin/conversations?status=open"),
+        user.local ? Promise.resolve({ conversations: [] as ConversationDTO[] }) : api<{ conversations: ConversationDTO[] }>("/api/admin/conversations?status=open"),
         api<ReportsRes>("/api/admin/reports?status=new"),
         api<ReportsRes>("/api/admin/reports?status=in_progress"),
       ]);
@@ -38,7 +38,7 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
     } catch {
       setError(true);
     }
-  }, []);
+  }, [user.local]);
 
   useLive(load, 5_000);
 
@@ -54,7 +54,17 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
       <main className="relative z-10 mx-auto -mt-8 grid max-w-6xl gap-4 px-4 pb-10">
         {/* เมนูหลัก */}
         <div className="grid gap-4 sm:grid-cols-3">
-          <Choice href="/admin/chat" n={1} icon="chat" title={t("ahChat")} hint={t("ahChatHint")} badge={waiting} badgeLabel={t("ahWaiting")} cta={t("hubGo")} />
+          <Choice
+            href="/admin/chat"
+            n={1}
+            icon="chat"
+            title={t("ahChat")}
+            hint={user.local ? t("ahChatNeedsCw") : t("ahChatHint")}
+            badge={waiting}
+            badgeLabel={t("ahWaiting")}
+            cta={t("hubGo")}
+            disabled={user.local}
+          />
           <Choice href="/admin/reports" n={2} icon="clipboard" title={t("ahReports")} hint={t("ahReportsHint")} badge={newReports} badgeLabel={t("rcTabNew")} cta={t("hubGo")} />
           <Choice href="/admin/users" n={3} icon="user" title={t("admUsers")} hint={t("ahUsersHint")} cta={t("hubGo")} />
         </div>
@@ -67,6 +77,7 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
 
         {/* สรุปรายการค้าง */}
         <div className="grid gap-4 lg:grid-cols-2">
+          {!user.local && (
           <section className="card p-4">
             <div className="flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-sm font-semibold">
@@ -109,6 +120,7 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
               </ul>
             )}
           </section>
+          )}
 
           <section className="card p-4">
             <div className="flex items-center justify-between gap-2">
@@ -174,6 +186,7 @@ function Choice({
   badge,
   badgeLabel,
   cta,
+  disabled,
 }: {
   href: string;
   n: number;
@@ -183,7 +196,25 @@ function Choice({
   badge?: number;
   badgeLabel?: string;
   cta: string;
+  /** ปิดเมนูนี้ (แสดงจาง ไม่ลิงก์) */
+  disabled?: boolean;
 }) {
+  if (disabled) {
+    return (
+      <div aria-disabled="true" className="card flex flex-col gap-4 p-6 opacity-60">
+        <div className="flex items-center gap-3">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-stone-400 text-white">
+            <Icon name={icon} className="h-6 w-6" />
+          </span>
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-stone-400 text-xs font-bold text-white">{n}</span>
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-stone-600">{title}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-stone-500">{hint}</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <Link href={href} className="card group flex flex-col gap-4 p-6 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-deep-800/10">
       <div className="flex items-center gap-3">

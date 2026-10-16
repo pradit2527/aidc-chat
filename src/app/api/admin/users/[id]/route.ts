@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminGuard, parseId } from "@/lib/adminApi";
 import { parseUserFields, validPassword } from "@/lib/userInput";
-import { deleteUser, updateUser } from "@/lib/users";
+import { deleteUser, getUserById, updateUser } from "@/lib/users";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -12,14 +12,16 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const id = parseId((await params).id);
   if (!id) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
-  const f = parseUserFields(b);
+  const target = await getUserById(id).catch(() => null);
+  if (!target) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  const f = parseUserFields(b, target.role);
   if ("error" in f) return NextResponse.json(f, { status: 400 });
   const hasPw = typeof b?.password === "string" && b.password !== "";
   if (hasPw && !validPassword(b?.password)) return NextResponse.json({ error: "password_invalid" }, { status: 400 });
   try {
     const user = await updateUser(id, { ...f, ...(hasPw ? { password: b?.password as string } : {}) });
     if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
-    console.info(`[admin/users] ${g.user.email} updated user ${user.username}${hasPw ? " (password reset)" : ""}`);
+    console.info(`[admin/users] ${g.user.email} updated ${user.role} ${user.username}${hasPw ? " (password reset)" : ""}`);
     return NextResponse.json({ user });
   } catch (e) {
     console.error("[admin/users] update failed:", e instanceof Error ? e.message : e);
@@ -32,6 +34,7 @@ export async function DELETE(req: Request, { params }: Ctx) {
   if (g instanceof Response) return g;
   const id = parseId((await params).id);
   if (!id) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  if (g.local && g.user.id === id) return NextResponse.json({ error: "cannot_delete_self" }, { status: 400 }); // กันลบตัวเองจนล็อกเอาต์
   try {
     if (!(await deleteUser(id))) return NextResponse.json({ error: "not_found" }, { status: 404 });
     console.info(`[admin/users] ${g.user.email} deleted user id ${id}`);

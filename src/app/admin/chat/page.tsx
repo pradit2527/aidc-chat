@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import AdminApp from "@/components/AdminApp";
 import type { AdminUser } from "@/lib/adminTypes";
 import { DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n";
@@ -28,5 +29,6 @@ export default async function AdminChatPage({ searchParams }: { searchParams: Pr
       user = null;
     }
   }
+  if (user?.local) redirect("/admin"); // แอดมินในระบบเอง ไม่มี token Chatwoot — คอนโซลแชทต้องใช้บัญชี Chatwoot
   return <AdminApp initialLang={initialLang} user={user} configured={configured} view="chat" initialConversationId={initialConversationId} />;
 }

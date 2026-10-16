@@ -27,6 +27,7 @@ const ERRORS: Record<string, MsgKey> = {
   name_required: "errNameRequired",
   department_required: "errDeptRequired",
   storage_error: "uNoDb",
+  cannot_delete_self: "uCannotDeleteSelf",
 };
 
 const field =
@@ -50,6 +51,7 @@ function Console({ user }: { user: AdminUser }) {
   const [users, setUsers] = useState<UserListItem[] | null>(null);
   const [loadErr, setLoadErr] = useState(false);
   const [q, setQ] = useState("");
+  const [tab, setTab] = useState<"staff" | "admin">("staff");
   const [editing, setEditing] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -66,8 +68,8 @@ function Console({ user }: { user: AdminUser }) {
 
   const shown = useMemo(() => {
     const k = q.trim().toLowerCase();
-    return (users ?? []).filter((u) => !k || u.username.includes(k) || u.name.toLowerCase().includes(k));
-  }, [users, q]);
+    return (users ?? []).filter((u) => u.role === tab && (!k || u.username.includes(k) || u.name.toLowerCase().includes(k)));
+  }, [users, q, tab]);
   const dept = (id: string) => DEPARTMENTS.find((d) => d.id === id)?.label[lang] ?? id;
 
   return (
@@ -86,7 +88,7 @@ function Console({ user }: { user: AdminUser }) {
             <h2 className="flex items-center gap-2 text-base font-semibold">
               <Icon name="list" className="h-4 w-4 text-deep-700" />
               {t("uList")}
-              {users && <span className="text-xs font-normal text-stone-500">({users.length})</span>}
+              {users && <span className="text-xs font-normal text-stone-500">({users.filter((u) => u.role === tab).length})</span>}
             </h2>
             <input
               value={q}
@@ -95,6 +97,20 @@ function Console({ user }: { user: AdminUser }) {
               aria-label={t("uSearch")}
               className="w-full rounded-lg border border-stone-300 px-3 py-1.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 sm:w-60"
             />
+          </div>
+          <div className="mt-3 flex gap-1 rounded-lg bg-stone-100 p-1 text-sm font-semibold" role="tablist">
+            {(["staff", "admin"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                aria-selected={tab === k}
+                onClick={() => setTab(k)}
+                className={`flex-1 rounded-md px-3 py-1.5 transition ${tab === k ? "bg-white text-deep-800 shadow-sm" : "text-stone-600 hover:text-deep-800"}`}
+              >
+                {k === "staff" ? t("uTabStaff") : t("uTabAdmin")}
+              </button>
+            ))}
           </div>
           {notice && (
             <p role="status" className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -126,7 +142,7 @@ function Console({ user }: { user: AdminUser }) {
                         {u.name} <span className="font-normal text-stone-500">· {u.username}</span>
                       </div>
                       <div className="truncate text-xs text-stone-500">
-                        {[dept(u.department), u.contact].filter(Boolean).join(" · ")}
+                        {[u.role === "admin" ? t("uBadgeAdmin") : dept(u.department), u.contact].filter(Boolean).join(" · ")}
                         {u.createdAt ? ` · ${t("uCreatedAt")} ${new Date(u.createdAt * 1000).toLocaleDateString("en-GB")}` : ""}
                       </div>
                     </div>
@@ -167,7 +183,7 @@ function DeptSelect({ value, onChange }: { value: string; onChange: (v: string) 
 
 function CreateForm({ onCreated }: { onCreated: (name: string) => void }) {
   const { t } = useI18n();
-  const empty = { username: "", password: "", name: "", department: "", contact: "" };
+  const empty = { role: "staff", username: "", password: "", name: "", department: "", contact: "" };
   const [f, setF] = useState(empty);
   const [err, setErr] = useState<MsgKey | null>(null);
   const [busy, setBusy] = useState(false);
@@ -196,6 +212,14 @@ function CreateForm({ onCreated }: { onCreated: (name: string) => void }) {
         {t("uNew")}
       </h2>
       <label className="block text-sm font-medium">
+        {t("uRole")}
+        <select value={f.role} onChange={(e) => set("role")(e.target.value)} className={field}>
+          <option value="staff">{t("uRoleStaff")}</option>
+          <option value="admin">{t("uRoleAdmin")}</option>
+        </select>
+        {f.role === "admin" && <span className="mt-1 block text-xs font-normal text-stone-500">{t("uAdminHint")}</span>}
+      </label>
+      <label className="block text-sm font-medium">
         {t("fieldUsername")}
         <input value={f.username} onChange={(e) => set("username")(e.target.value)} maxLength={40} autoComplete="off" autoCapitalize="none" spellCheck={false} className={field} />
         <span className="mt-1 block text-xs font-normal text-stone-500">{t("uUsernameHint")}</span>
@@ -209,14 +233,18 @@ function CreateForm({ onCreated }: { onCreated: (name: string) => void }) {
         {t("fieldName")}
         <input value={f.name} onChange={(e) => set("name")(e.target.value)} maxLength={80} className={field} />
       </label>
-      <label className="block text-sm font-medium">
-        {t("fieldDept")}
-        <DeptSelect value={f.department} onChange={set("department")} />
-      </label>
-      <label className="block text-sm font-medium">
-        {t("fieldContact")}
-        <input value={f.contact} onChange={(e) => set("contact")(e.target.value)} maxLength={40} inputMode="tel" className={field} />
-      </label>
+      {f.role === "staff" && (
+        <>
+          <label className="block text-sm font-medium">
+            {t("fieldDept")}
+            <DeptSelect value={f.department} onChange={set("department")} />
+          </label>
+          <label className="block text-sm font-medium">
+            {t("fieldContact")}
+            <input value={f.contact} onChange={(e) => set("contact")(e.target.value)} maxLength={40} inputMode="tel" className={field} />
+          </label>
+        </>
+      )}
       {err && (
         <p role="alert" className="text-sm text-rose-600">
           {t(err)}
@@ -269,14 +297,18 @@ function EditRow({ u, onDone }: { u: UserListItem; onDone: (msg?: string) => voi
           {t("fieldName")}
           <input value={f.name} onChange={(e) => set("name")(e.target.value)} maxLength={80} className={field} />
         </label>
-        <label className="block text-xs font-medium">
-          {t("fieldDept")}
-          <DeptSelect value={f.department} onChange={set("department")} />
-        </label>
-        <label className="block text-xs font-medium">
-          {t("fieldContact")}
-          <input value={f.contact} onChange={(e) => set("contact")(e.target.value)} maxLength={40} className={field} />
-        </label>
+        {u.role === "staff" && (
+          <>
+            <label className="block text-xs font-medium">
+              {t("fieldDept")}
+              <DeptSelect value={f.department} onChange={set("department")} />
+            </label>
+            <label className="block text-xs font-medium">
+              {t("fieldContact")}
+              <input value={f.contact} onChange={(e) => set("contact")(e.target.value)} maxLength={40} className={field} />
+            </label>
+          </>
+        )}
       </div>
       <label className="block text-xs font-medium">
         {t("uNewPassword")}

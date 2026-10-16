@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isHttps, loginAllowed, sameOrigin } from "@/lib/adminApi";
+import { isHttps, loginAllowed, rateLimit, sameOrigin } from "@/lib/adminApi";
 import { chatwootConfig } from "@/lib/chatwoot";
 import { ACCOUNT_ID } from "@/lib/cw";
 import { SESSION_COOKIE, SESSION_TTL_SEC, sealSession, type Session } from "@/lib/session";
+import { authenticate, normalizeUsername } from "@/lib/users";
 
 /**
  * ล็อกอินด้วยบัญชี Chatwoot ของผู้ใช้เอง — ส่งต่อให้ Chatwoot ตรวจ ไม่เก็บรหัสผ่านไว้ที่ไหน
@@ -22,6 +23,9 @@ export async function POST(req: NextRequest) {
   if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 16) {
     return NextResponse.json({ error: "server_not_configured" }, { status: 500 });
   }
+
+  // ไม่มี "@" = username ของแอดมินบัญชีในระบบเอง (สร้างที่ /admin/users) · มี "@" = อีเมลบัญชี Chatwoot
+  if (!email.includes("@")) return localAdminLogin(req, email, password);
 
   const { baseUrl } = chatwootConfig();
   let res: Response;
@@ -62,6 +66,37 @@ export async function POST(req: NextRequest) {
     exp: Date.now() + SESSION_TTL_SEC * 1000,
   };
 
+  const out = NextResponse.json({ user: session.user });
+  out.cookies.set(SESSION_COOKIE, sealSession(session), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isHttps(req),
+    path: "/",
+    maxAge: SESSION_TTL_SEC,
+  });
+  return out;
+}
+
+/** แอดมินบัญชีในระบบเอง: ตรวจกับ app_users (role admin) — เซสชันไม่มี token Chatwoot (ใช้คอนโซลแชทไม่ได้) */
+async function localAdminLogin(req: NextRequest, usernameRaw: string, password: string) {
+  const username = normalizeUsername(usernameRaw);
+  if (!rateLimit(`admin-login:${username}`, 12)) return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
+  let user;
+  try {
+    user = await authenticate(username, password, "admin");
+  } catch (e) {
+    console.error("[admin] local login failed:", e instanceof Error ? e.message : e);
+    return NextResponse.json({ error: "chatwoot_error" }, { status: 502 });
+  }
+  if (!user) return NextResponse.json({ error: "invalid_credentials" }, { status: 401 });
+  const session: Session = {
+    token: "",
+    client: "",
+    uid: `local:${user.id}`,
+    user: { id: user.id, name: user.name, email: user.username, local: true },
+    local: true,
+    exp: Date.now() + SESSION_TTL_SEC * 1000,
+  };
   const out = NextResponse.json({ user: session.user });
   out.cookies.set(SESSION_COOKIE, sealSession(session), {
     httpOnly: true,

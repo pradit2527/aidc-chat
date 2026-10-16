@@ -25,6 +25,8 @@ export class CwError extends Error {
 export const acct = (path: string) => `/api/v1/accounts/${ACCOUNT_ID}${path}`;
 
 export async function cw<T>(s: Session, path: string, init: { method?: string; json?: unknown } = {}): Promise<T> {
+  // แอดมินบัญชีในระบบเอง ไม่มี token Chatwoot — ฟีเจอร์แชทต้องใช้บัญชี Chatwoot
+  if (s.local) throw new CwError(403, "chatwoot account required");
   const { baseUrl } = chatwootConfig();
   let res: Response;
   try {

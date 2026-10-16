@@ -3,6 +3,7 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import type { AdminUser } from "./adminTypes";
+import { getUserById } from "./users";
 
 export const SESSION_COOKIE = "cosi_admin";
 export const SESSION_TTL_SEC = 12 * 60 * 60;
@@ -14,6 +15,8 @@ export type Session = {
   user: AdminUser;
   /** หมดอายุ (ms) */
   exp: number;
+  /** true = แอดมินบัญชีในระบบเอง (username/password) — ไม่มี token Chatwoot จึงใช้คอนโซลแชทไม่ได้ */
+  local?: boolean;
 };
 
 function key(): Buffer {
@@ -49,5 +52,15 @@ export const unsealSession = (value: string | undefined): Session | null => unse
 
 /** ใช้ใน server component และ route handler */
 export async function getSession(): Promise<Session | null> {
-  return unsealSession((await cookies()).get(SESSION_COOKIE)?.value);
+  const s = unsealSession((await cookies()).get(SESSION_COOKIE)?.value);
+  if (s?.local) {
+    // แอดมินในระบบเอง: บัญชีถูกลบ/ไม่ใช่แอดมินแล้ว → เซสชันใช้ไม่ได้ทันที
+    try {
+      const u = await getUserById(s.user.id);
+      if (!u || u.role !== "admin") return null;
+    } catch {
+      return null;
+    }
+  }
+  return s;
 }

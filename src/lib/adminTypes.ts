@@ -2,7 +2,8 @@
 
 export type ConvStatus = "open" | "resolved" | "pending" | "snoozed";
 
-export type AdminUser = { id: number; name: string; email: string };
+/** local = แอดมินบัญชีในระบบเอง (email คือ username) */
+export type AdminUser = { id: number; name: string; email: string; local?: boolean };
 
 export type ConversationDTO = {
   id: number;

@@ -5,9 +5,12 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { db, dbEnabled, q } from "./db";
 
+export type Role = "staff" | "admin";
+
 export type User = {
   id: number;
   username: string;
+  role: Role;
   name: string;
   department: string;
   contact: string;
@@ -68,6 +71,7 @@ function ensureTable(): Promise<void> {
          name TEXT NOT NULL, department TEXT NOT NULL, contact TEXT NOT NULL DEFAULT '',
          created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
     )
+    .then(() => db().query("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'staff'"))
     .then(() => undefined)
     .catch((e) => {
       ensured = null;
@@ -76,16 +80,17 @@ function ensureTable(): Promise<void> {
   return ensured;
 }
 
-type DbRow = { id: string; username: string; password_hash: string; name: string; department: string; contact: string; created_at?: string | Date };
+type DbRow = { id: string; username: string; role?: string; password_hash: string; name: string; department: string; contact: string; created_at?: string | Date };
 const fromDb = (r: DbRow): UserRow => ({
   id: Number(r.id),
   username: r.username,
+  role: r.role === "admin" ? "admin" : "staff",
   passwordHash: r.password_hash,
   name: r.name,
   department: r.department,
   contact: r.contact,
 });
-const strip = (u: UserRow): User => ({ id: u.id, username: u.username, name: u.name, department: u.department, contact: u.contact });
+const strip = (u: UserRow): User => ({ id: u.id, username: u.username, role: u.role === "admin" ? "admin" : "staff", name: u.name, department: u.department, contact: u.contact });
 
 async function findRow(username: string): Promise<UserRow | null> {
   if (dbEnabled) {
@@ -99,6 +104,7 @@ async function findRow(username: string): Promise<UserRow | null> {
 export class UsernameTakenError extends Error {}
 
 export async function createUser(input: {
+  role?: Role;
   username: string;
   password: string;
   name: string;
@@ -107,12 +113,13 @@ export async function createUser(input: {
 }): Promise<User> {
   const passwordHash = await hashPassword(input.password);
   const { username, name, department, contact } = input;
+  const role: Role = input.role === "admin" ? "admin" : "staff";
   if (dbEnabled) {
     await ensureTable();
     const r = await q<DbRow>(
-      `INSERT INTO app_users (username, password_hash, name, department, contact)
-       VALUES ($1,$2,$3,$4,$5) ON CONFLICT (username) DO NOTHING RETURNING *`,
-      [username, passwordHash, name, department, contact],
+      `INSERT INTO app_users (username, password_hash, name, department, contact, role)
+       VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (username) DO NOTHING RETURNING *`,
+      [username, passwordHash, name, department, contact, role],
     );
     if (!r[0]) throw new UsernameTakenError();
     return strip(fromDb(r[0]));
@@ -120,7 +127,7 @@ export async function createUser(input: {
   const run = chain.then(async () => {
     const d = await readFileStore();
     if (d.users.some((u) => u.username === username)) throw new UsernameTakenError();
-    const row = { id: d.nextId, username, passwordHash, name, department, contact, createdAt: new Date().toISOString() };
+    const row = { id: d.nextId, username, role, passwordHash, name, department, contact, createdAt: new Date().toISOString() };
     d.users.push(row);
     d.nextId += 1;
     await writeFileStore(d);
@@ -130,11 +137,11 @@ export async function createUser(input: {
   return run;
 }
 
-/** ตรวจ username + รหัสผ่าน → คืนผู้ใช้ หรือ null ถ้าไม่ถูกต้อง */
-export async function authenticate(usernameRaw: string, password: string): Promise<User | null> {
+/** ตรวจ username + รหัสผ่าน (+ บทบาทต้องตรง: staff = พนักงาน, admin = แอดมินในระบบเอง) → คืนผู้ใช้ หรือ null */
+export async function authenticate(usernameRaw: string, password: string, role: Role = "staff"): Promise<User | null> {
   const row = await findRow(normalizeUsername(usernameRaw));
   const ok = await verifyPassword(password, row?.passwordHash ?? null);
-  return ok && row ? strip(row) : null;
+  return ok && row && strip(row).role === role ? strip(row) : null;
 }
 
 export async function getUserById(id: number): Promise<User | null> {

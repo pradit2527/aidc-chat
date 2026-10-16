@@ -32,7 +32,8 @@ export function profileOf(u: User): Profile {
 export async function getCurrentUser(): Promise<User | null> {
   try {
     const s = unsealJson<UserSession>((await cookies()).get(USER_COOKIE)?.value);
-    return s ? await getUserById(s.uid) : null;
+    const u = s ? await getUserById(s.uid) : null;
+    return u?.role === "staff" ? u : null; // บัญชีแอดมินใช้เข้าพอร์ทัลพนักงานไม่ได้
   } catch {
     return null; // SESSION_SECRET/ที่เก็บผู้ใช้ใช้ไม่ได้ → ถือว่ายังไม่ล็อกอิน
   }
