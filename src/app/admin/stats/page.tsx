@@ -6,6 +6,7 @@ import { AdminHeaderStandalone } from "@/components/AdminHeader";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import type { AdminUser } from "@/lib/adminTypes";
 import { initialOf, labelName } from "@/lib/adminClient";
+import { demoStats } from "@/lib/adminDemo";
 import { dbEnabled } from "@/lib/db";
 import { DEFAULT_LANG, isLang, LANG_COOKIE, translate, type Lang, type MsgKey } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
@@ -25,8 +26,8 @@ const fmtAt = (sec: number | null) => (sec ? `${ticketDate(sec)} ${laoTime(sec)}
 /** หน้าสถิติจากทะเบียน Ticket ใน Neon — โทนขาว/ส้ม เรียบ อ่านง่าย (ต้องล็อกอินคอนโซลก่อน) */
 type View = "cards" | "table";
 
-export default async function StatsPage({ searchParams }: { searchParams: Promise<{ days?: string; page?: string; view?: string }> }) {
-  const [{ days: daysParam, page: pageParam, view: viewParam }, jar] = await Promise.all([searchParams, cookies()]);
+export default async function StatsPage({ searchParams }: { searchParams: Promise<{ days?: string; page?: string; view?: string; demo?: string }> }) {
+  const [{ days: daysParam, page: pageParam, view: viewParam, demo }, jar] = await Promise.all([searchParams, cookies()]);
   const view: View = viewParam === "table" ? "table" : "cards";
   const saved = jar.get(LANG_COOKIE)?.value;
   const lang: Lang = isLang(saved) ? saved : DEFAULT_LANG;
@@ -42,7 +43,8 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
 
   const days = Math.max(1, Math.min(365, Number(daysParam) || 14));
   const page = Math.max(1, Number(pageParam) || 1);
-  const stats: Stats | null = dbEnabled ? await getStats(days, page) : null;
+  // ?demo=1 = ข้อมูลตัวอย่าง (เฉพาะตอนพัฒนา) ไว้ดูหน้าตาโดยไม่ต้องมีฐานข้อมูล
+  const stats: Stats | null = demo === "1" && process.env.NODE_ENV !== "production" ? demoStats(days) : dbEnabled ? await getStats(days, page) : null;
 
   const minutes = (n: number | null) => {
     if (n === null) return "—";
@@ -51,12 +53,13 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
   };
   const statusChip = (status: string) =>
     status === "resolved" ? (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-        <Icon name="check" className="h-3 w-3" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
         {t("admStatusResolved")}
       </span>
     ) : (
-      <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-brand-100">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
         {t("admStatusOpen")}
       </span>
     );
@@ -82,7 +85,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
 
       <main className="relative z-10 mx-auto -mt-8 max-w-6xl space-y-6 px-4 pb-10">
         {/* แถบเลือกช่วงเวลา (การ์ดขาวซ้อนขอบส่วนหัว) */}
-        <nav className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm" aria-label={t("stRange")}>
+        <nav className="card flex flex-wrap items-center justify-between gap-2 p-3" aria-label={t("stRange")}>
           <span className="flex items-center gap-2 text-sm font-semibold text-deep-800">
             <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand-600">
               <Icon name="list" className="h-4 w-4" />
@@ -111,64 +114,79 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
           </p>
         ) : (
           <>
-            {/* ตัวเลขสรุป */}
-            <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6" aria-label="Summary">
-              {kpis.map((k) => (
-                <div
-                  key={k.key}
-                  className={`rounded-2xl border p-4 shadow-sm ${k.accent ? "border-brand-200 bg-gradient-to-br from-brand-50 to-white" : "border-stone-200 bg-white"}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium leading-snug text-stone-500">{t(k.key)}</span>
-                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${k.accent ? "bg-brand-600 text-white" : "bg-brand-50 text-brand-600"}`}>
-                      <Icon name={k.icon} className="h-4 w-4" />
-                    </span>
+            {/* ตัวเลขสรุป: แถบเดียว แบ่งช่องด้วยเส้นบาง ๆ */}
+            <section className="card overflow-hidden" aria-label="Summary">
+              <div className="grid grid-cols-2 gap-px bg-stone-100 md:grid-cols-3 xl:grid-cols-6">
+                {kpis.map((k) => (
+                  <div key={k.key} className="relative bg-white p-4 sm:p-5">
+                    {k.accent && <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-brand-500" />}
+                    <div className="flex items-center gap-2">
+                      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${k.accent ? "bg-brand-600 text-white shadow-md shadow-brand-600/25" : "bg-stone-100 text-deep-700"}`}>
+                        <Icon name={k.icon} className="h-4 w-4" />
+                      </span>
+                      <span className="text-[11px] font-medium leading-snug text-stone-500">{t(k.key)}</span>
+                    </div>
+                    <div className={`mt-3 font-bold leading-none tracking-tight tabular-nums ${k.value.length > 6 ? "text-xl sm:text-2xl" : "text-3xl"} ${k.accent ? "text-brand-600" : "text-deep-800"}`}>{k.value}</div>
                   </div>
-                  <div className={`mt-2 text-2xl font-bold leading-tight tabular-nums ${k.accent ? "text-brand-700" : "text-deep-800"}`}>{k.value}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </section>
 
             {/* ตารางสรุป 3 ตาราง */}
-            <div className="grid gap-4 lg:grid-cols-3">
-              <Panel title={t("stPerDay", { n: days })} icon="list">
+            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              <Panel title={t("stPerDay", { n: days })} icon="list" count={stats.perDay.length}>
                 <DataTable
-                  head={[t("stColDay"), t("stColCreated"), t("stColResolved"), t("stColUrgent")]}
+                  head={[{ label: t("stColDay") }, { label: t("stColCreated"), wide: true }, { label: t("stColResolved") }, { label: t("stColUrgent") }]}
                   empty={t("stEmpty")}
                   rows={stats.perDay.map((r) => ({
                     key: r.day,
-                    cells: [r.day, <Bar key="c" value={r.created} max={maxDay} />, r.resolved, <Urgent key="u" n={r.urgent} />],
+                    cells: [<span key="d" className="font-medium tabular-nums">{r.day}</span>, <Bar key="c" value={r.created} max={maxDay} />, <Resolved key="r" n={r.resolved} />, <Urgent key="u" n={r.urgent} />],
                   }))}
+                  foot={
+                    stats.perDay.length > 1
+                      ? [t("stColTotal"), sum(stats.perDay.map((r) => r.created)), sum(stats.perDay.map((r) => r.resolved)), sum(stats.perDay.map((r) => r.urgent))]
+                      : undefined
+                  }
                 />
               </Panel>
-              <Panel title={t("stPerLabel")} icon="list">
+              <Panel title={t("stPerLabel")} icon="list" count={stats.perLabel.length}>
                 <DataTable
-                  head={[t("stColLabel"), t("stColTotal"), t("stColOpen")]}
+                  head={[{ label: t("stColLabel") }, { label: t("stColTotal"), wide: true }, { label: t("stColOpen") }]}
                   empty={t("stEmpty")}
-                  rows={stats.perLabel.map((r) => ({
+                  rows={stats.perLabel.map((r, i) => ({
                     key: r.label,
-                    cells: [labelName(r.label, lang), <Bar key="t" value={r.total} max={maxLabel} />, <OpenCount key="o" n={r.open} />],
+                    cells: [
+                      <span key="l" className="flex min-w-0 items-center gap-2">
+                        <Rank n={i + 1} />
+                        <span className="truncate" title={labelName(r.label, lang)}>{labelName(r.label, lang)}</span>
+                      </span>,
+                      <Bar key="t" value={r.total} max={maxLabel} />,
+                      <OpenCount key="o" n={r.open} />,
+                    ],
                   }))}
                 />
               </Panel>
-              <Panel title={t("stPerAgent")} icon="user">
+              <Panel title={t("stPerAgent")} icon="user" count={stats.perAgent.length}>
                 <DataTable
-                  head={[t("stColAgent"), t("stColTotal"), t("stColOpen"), t("stColResolved")]}
+                  head={[{ label: t("stColAgent") }, { label: t("stColTotal"), wide: true }, { label: t("stColOpen") }, { label: t("stColResolved") }]}
                   empty={t("stEmpty")}
                   rows={stats.perAgent.map((r) => ({
                     key: r.agent,
                     cells: [
                       <span key="a" className="flex min-w-0 items-center gap-2">
-                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-deep-700 text-xs font-bold text-white">{initialOf(r.agent)}</span>
-                        <span className="truncate" title={r.agent}>
-                          {r.agent}
-                        </span>
+                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-deep-600 to-deep-800 text-xs font-bold text-white">{initialOf(r.agent)}</span>
+                        <span className="truncate font-medium" title={r.agent}>{r.agent}</span>
                       </span>,
                       <Bar key="t" value={r.total} max={maxAgent} />,
                       <OpenCount key="o" n={r.open} />,
-                      r.resolved,
+                      <Resolved key="r" n={r.resolved} />,
                     ],
                   }))}
+                  foot={
+                    stats.perAgent.length > 1
+                      ? [t("stColTotal"), sum(stats.perAgent.map((r) => r.total)), sum(stats.perAgent.map((r) => r.open)), sum(stats.perAgent.map((r) => r.resolved))]
+                      : undefined
+                  }
                 />
               </Panel>
             </div>
@@ -207,11 +225,11 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                 <p className="py-8 text-center text-sm text-stone-400">{t("stEmpty")}</p>
               ) : view === "table" ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] text-sm">
+                  <table className="w-full min-w-[760px] text-sm">
                     <thead>
-                      <tr className="bg-brand-50 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-800">
+                      <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                         {[t("stColTicket"), t("stColName"), t("stColLabel"), t("stColStatus"), t("stColAgent"), t("stColCreatedAt"), t("stColResolvedAt")].map((h, i) => (
-                          <th key={h} className={`whitespace-nowrap px-3 py-2.5 ${i === 0 ? "rounded-l-xl" : ""} ${i === 6 ? "rounded-r-xl" : ""}`}>
+                          <th key={h} className="whitespace-nowrap border-b border-stone-200 px-3 pb-2.5">
                             {h}
                           </th>
                         ))}
@@ -219,7 +237,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                     </thead>
                     <tbody>
                       {stats.recent.map((r) => (
-                        <tr key={r.id} className="border-b border-stone-100 transition last:border-0 odd:bg-white even:bg-stone-50/60 hover:bg-brand-50/40">
+                        <tr key={r.id} className="border-b border-stone-100 transition last:border-0 hover:bg-brand-50/50">
                           <td className="whitespace-nowrap px-3 py-2.5 font-semibold tabular-nums">
                             <a href={`/admin/chat?c=${r.id}`} className="text-brand-700 hover:underline">
                               {r.ticketNo}
@@ -232,7 +250,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                           </td>
                           <td className="px-3 py-2.5">
                             <span className="flex items-center gap-2">
-                              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-deep-700 text-xs font-bold text-white">{initialOf(r.name)}</span>
+                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-deep-600 to-deep-800 text-xs font-bold text-white">{initialOf(r.name)}</span>
                               <span className="min-w-0">
                                 <span className="block truncate font-medium text-stone-800">{r.name}</span>
                                 {r.department && <span className="block truncate text-xs text-stone-500">{r.department}</span>}
@@ -332,7 +350,9 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
   );
 }
 
-/** กล่องตารางสีขาว หัวข้อพร้อมไอคอนส้ม */
+const sum = (xs: number[]) => xs.reduce((n, x) => n + x, 0);
+
+/** การ์ดขาวของตาราง: หัวข้อ + ไอคอน + จำนวนแถว */
 function Panel({
   title,
   icon,
@@ -347,13 +367,13 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="min-w-0 overflow-hidden rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-deep-800">
-        <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-50 text-brand-600">
+    <section className="card min-w-0 overflow-hidden p-4 sm:p-5">
+      <h2 className="mb-3 flex items-center gap-2.5 text-sm font-semibold text-deep-800">
+        <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 text-brand-600">
           <Icon name={icon} className="h-4 w-4" />
         </span>
         {title}
-        {count !== undefined && <span className="text-xs font-normal text-stone-400">({count})</span>}
+        {count !== undefined && <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-500">{count}</span>}
         {actions && <span className="ml-auto flex items-center gap-1">{actions}</span>}
       </h2>
       {children}
@@ -361,18 +381,17 @@ function Panel({
   );
 }
 
-/** ตารางมาตรฐาน: หัวส้มอ่อน แถวสลับสี ตัวเลขชิดขวา */
-function DataTable({ head, rows, empty }: { head: string[]; rows: { key: string; cells: React.ReactNode[] }[]; empty: string }) {
+type Col = { label: string; /** คอลัมน์ที่มีแถบสัดส่วน (กว้างขึ้น) */ wide?: boolean };
+
+/** ตารางสรุป: หัวเทาตัวเล็ก, เส้นบางคั่นแถว, ไฮไลต์แถวตอนชี้, แถวรวมท้ายตาราง (ถ้ามี) */
+function DataTable({ head, rows, empty, foot }: { head: Col[]; rows: { key: string; cells: React.ReactNode[] }[]; empty: string; foot?: React.ReactNode[] }) {
   return (
-    <table className="w-full text-sm">
+    <table className="w-full border-separate border-spacing-0 text-sm">
       <thead>
-        <tr className="bg-brand-50 text-[11px] font-semibold uppercase tracking-wide text-brand-800">
+        <tr className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
           {head.map((h, i) => (
-            <th
-              key={h}
-              className={`whitespace-nowrap px-2 py-2 ${i === 0 ? "w-full rounded-l-xl text-left" : "text-right"} ${i === head.length - 1 ? "rounded-r-xl" : ""}`}
-            >
-              {h}
+            <th key={h.label} className={`whitespace-nowrap border-b border-stone-200 px-2 pb-2 ${i === 0 ? "w-full text-left" : h.wide ? "min-w-[5rem] text-left" : "text-right"}`}>
+              {h.label}
             </th>
           ))}
         </tr>
@@ -380,21 +399,21 @@ function DataTable({ head, rows, empty }: { head: string[]; rows: { key: string;
       <tbody>
         {rows.length === 0 && (
           <tr>
-            <td colSpan={head.length} className="py-6 text-center text-stone-400">
+            <td colSpan={head.length} className="py-8 text-center text-stone-400">
               {empty}
             </td>
           </tr>
         )}
         {rows.map((r) => (
-          <tr key={r.key} className="border-b border-stone-100 transition last:border-0 odd:bg-white even:bg-stone-50/60 hover:bg-brand-50/40">
+          <tr key={r.key} className="group transition hover:bg-brand-50/50">
             {r.cells.map((cell, j) =>
               j === 0 ? (
                 // max-w-0 + truncate: คอลัมน์แรกยืดเต็มที่เหลือและตัดด้วย … แทนที่จะดันตารางล้นการ์ด
-                <td key={j} className="max-w-0 px-2 py-2 text-stone-800">
+                <td key={j} className="max-w-0 border-b border-stone-100 px-2 py-2.5 text-stone-800 group-last:border-0">
                   <span className="block truncate">{cell}</span>
                 </td>
               ) : (
-                <td key={j} className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-stone-700">
+                <td key={j} className={`whitespace-nowrap border-b border-stone-100 px-2 py-2.5 tabular-nums text-stone-700 group-last:border-0 ${head[j]?.wide ? "text-left" : "text-right"}`}>
                   {cell}
                 </td>
               ),
@@ -402,29 +421,56 @@ function DataTable({ head, rows, empty }: { head: string[]; rows: { key: string;
           </tr>
         ))}
       </tbody>
+      {foot && rows.length > 0 && (
+        <tfoot>
+          <tr className="text-xs font-bold text-deep-800">
+            {foot.map((c, j) => (
+              <td key={j} className={`border-t-2 border-stone-200 px-2 pt-2.5 tabular-nums ${j === 0 ? "text-left uppercase tracking-wide text-stone-500" : head[j]?.wide ? "text-left" : "text-right"}`}>
+                {c}
+              </td>
+            ))}
+          </tr>
+        </tfoot>
+      )}
     </table>
   );
 }
 
-/** ตัวเลขพร้อมแถบส้มสัดส่วนเทียบค่าสูงสุดในตาราง */
+/** ตัวเลขพร้อมแถบสัดส่วนเทียบค่าสูงสุดในตาราง (แถบเต็มความกว้างช่อง) */
 function Bar({ value, max }: { value: number; max: number }) {
-  const pct = Math.max(4, Math.round((value / Math.max(1, max)) * 100));
+  const pct = value === 0 ? 0 : Math.max(6, Math.round((value / Math.max(1, max)) * 100));
   return (
-    <span className="inline-flex items-center justify-end gap-2">
-      <span className="hidden h-1.5 w-10 overflow-hidden rounded-full bg-brand-100 sm:inline-block" aria-hidden>
-        <span className="block h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
+    <span className="flex items-center gap-2">
+      <span className="h-2 w-10 flex-1 overflow-hidden rounded-full bg-stone-100" aria-hidden>
+        <span className="block h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-600" style={{ width: `${pct}%` }} />
       </span>
-      <span className="min-w-5 text-right font-semibold">{value}</span>
+      <span className="w-5 text-right text-sm font-bold text-deep-800">{value}</span>
     </span>
   );
 }
 
+function Rank({ n }: { n: number }) {
+  return <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md text-[10px] font-bold ${n === 1 ? "bg-brand-600 text-white" : "bg-stone-100 text-stone-500"}`}>{n}</span>;
+}
+
 function OpenCount({ n }: { n: number }) {
-  return n > 0 ? <span className="inline-block min-w-6 rounded-full bg-brand-50 px-1.5 py-0.5 text-center text-xs font-semibold text-brand-700 ring-1 ring-brand-100">{n}</span> : <span className="text-stone-400">0</span>;
+  return n > 0 ? (
+    <span className="inline-flex min-w-6 justify-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-800 ring-1 ring-amber-200">{n}</span>
+  ) : (
+    <span className="text-stone-300">0</span>
+  );
+}
+
+function Resolved({ n }: { n: number }) {
+  return n > 0 ? <span className="font-semibold text-emerald-700">{n}</span> : <span className="text-stone-300">0</span>;
 }
 
 function Urgent({ n }: { n: number }) {
-  return n > 0 ? <span className="inline-block min-w-6 rounded-full bg-rose-50 px-1.5 py-0.5 text-center text-xs font-semibold text-rose-700 ring-1 ring-rose-100">{n}</span> : <span className="text-stone-400">0</span>;
+  return n > 0 ? (
+    <span className="inline-flex min-w-6 justify-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700 ring-1 ring-rose-200">{n}</span>
+  ) : (
+    <span className="text-stone-300">0</span>
+  );
 }
 
 /** ปุ่มก่อนหน้า/ถัดไปของรายการ Ticket (คงช่วงวันไว้ใน URL) */

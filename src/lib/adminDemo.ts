@@ -152,3 +152,50 @@ export async function demoApi<T>(path: string, init: Init = {}): Promise<T> {
   convs = convs.map((c) => ({ ...c }));
   return out as T;
 }
+
+/** ข้อมูลตัวอย่างของหน้า /admin/stats?demo=1 (เฉพาะตอนพัฒนา) — ไว้ดูหน้าตาโดยไม่ต้องมีฐานข้อมูล */
+export function demoStats(days: number): import("./stats").Stats {
+  const names = ["ທ້າວ ຄຳດາວ", "Nok", "khounpasith", "ນາງ ທັນທະລາດ", "Mai"];
+  const labels = ["cosi-network", "cosi-computer", "cosi-pms", "cosi-email"];
+  const recent = Array.from({ length: 8 }, (_, i) => ({
+    id: 100 + i,
+    ticketNo: `Ticket16-10-2026-${String(8 - i).padStart(3, "0")}`,
+    name: names[i % names.length],
+    department: ["Front Office · 101", "Housekeeping", "Accounting · 0205", "Human Resources"][i % 4],
+    labels: [labels[i % labels.length], ...(i % 3 === 0 ? ["cosi-urgent"] : [])],
+    status: i % 3 === 1 ? "resolved" : "open",
+    urgent: i % 3 === 0,
+    assignee: i % 4 === 3 ? "" : "Pradit Ratthanoo",
+    createdAt: ago(40 * i + 15),
+    resolvedAt: i % 3 === 1 ? ago(40 * i) : null,
+  }));
+  return {
+    days,
+    summary: { openNow: 6, createdToday: 3, resolvedToday: 1, avgResolveMin: 510, avgFirstReplyMin: 314, total: 24 },
+    perDay: [
+      { day: "16-10-2026", created: 3, resolved: 0, urgent: 1 },
+      { day: "15-10-2026", created: 2, resolved: 0, urgent: 0 },
+      { day: "14-10-2026", created: 6, resolved: 5, urgent: 0 },
+      { day: "13-10-2026", created: 4, resolved: 4, urgent: 1 },
+      { day: "12-10-2026", created: 9, resolved: 9, urgent: 3 },
+    ],
+    perLabel: [
+      { label: "cosi-network", total: 13, open: 3 },
+      { label: "cosi-computer", total: 7, open: 1 },
+      { label: "cosi-cctv", total: 6, open: 1 },
+      { label: "cosi-phone", total: 6, open: 1 },
+      { label: "cosi-pms", total: 5, open: 1 },
+      { label: "cosi-email", total: 5, open: 0 },
+      { label: "cosi-urgent", total: 4, open: 0 },
+    ],
+    perAgent: [
+      { agent: "Pradit Ratthanoo", total: 20, open: 6, resolved: 14 },
+      { agent: "Park IT", total: 3, open: 0, resolved: 3 },
+      { agent: "Decha", total: 1, open: 0, resolved: 1 },
+    ],
+    recent,
+    recentTotal: 24,
+    recentPage: 1,
+    recentPages: 3,
+  };
+}
