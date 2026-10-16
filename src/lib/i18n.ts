@@ -364,6 +364,7 @@ const M = {
   uCannotDeleteSelf: { lo: "ລຶບບັນຊີຂອງຕົນເອງບໍ່ໄດ້", en: "You cannot delete your own account" },
   ahChatNeedsCw: { lo: "ຄອນໂຊນແຊັດຕ້ອງເຂົ້າສູ່ລະບົບດ້ວຍບັນຊີ Chatwoot (ຫຼື ຕັ້ງ CHATWOOT_AGENT_TOKEN)", en: "The chat console needs a Chatwoot account sign-in (or CHATWOOT_AGENT_TOKEN to be set)" },
   // ---- หัวหน้าโรงแรม: แดชบอร์ด ----
+  qrGoManager: { lo: "ສຳລັບຫົວໜ້າໂຮງແຮມ (ແດຊບອດ)", en: "For hotel manager (dashboard)" },
   mgrLoginTitle: { lo: "ແດຊບອດຫົວໜ້າ", en: "Manager dashboard" },
   mgrLoginSub: { lo: "ເຂົ້າສູ່ລະບົບດ້ວຍຊື່ຜູ້ໃຊ້ຂອງຫົວໜ້າ ເພື່ອເບິ່ງສະຫຼຸບແຊັດ ແລະ ງານແຈ້ງບັນຫາທັງໝົດ", en: "Sign in with the manager account to see every chat and reported problem." },
   mgrNoAccountAsk: { lo: "ບັນຊີຫົວໜ້າສ້າງໂດຍທີມໄອທີ (ແອດມິນ)", en: "The manager account is created by the IT admin." },
