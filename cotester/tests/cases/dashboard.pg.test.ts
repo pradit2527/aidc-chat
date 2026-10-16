@@ -11,6 +11,7 @@ jest.mock("@/lib/db", () => {
 });
 
 import { db } from "@/lib/db";
+import { getCaseDetail } from "@/lib/caseDetail";
 import { getDashboard, parseDashboardQuery } from "@/lib/dashboard";
 
 const sql = (text: string, p: unknown[] = []) => db().query(text, p);
@@ -78,5 +79,25 @@ maybe("getDashboard (Postgres จริง)", () => {
     expect((await f("q=Ticket01-01-2026-01")).total).toBe(3);
     expect((await f("q=%25")).total).toBe(0); // % ไม่ถูกตีเป็น wildcard
     expect((await f("page=99")).page).toBe(1);
+  });
+
+  test("รายละเอียดเคส: แจ้งปัญหา = ข้อย่อย + ประวัติ (ไม่มีบันทึกภายใน) · แชท = ทะเบียน + ประวัติ (ไม่มี token → อ่านข้อความไม่ได้)", async () => {
+    delete process.env.CHATWOOT_AGENT_TOKEN;
+    const list = await getDashboard(all());
+    const rep = list.cases.find((c) => c.kind === "report" && c.ticketNo.endsWith("-011"))!;
+    await sql("UPDATE reports SET note = 'ความลับของไอที' WHERE id = $1", [rep.id]);
+    await sql("INSERT INTO report_events (report_id, type, actor, detail) VALUES ($1,'created','Kham','{\"topics\":[\"computer\"]}'::jsonb)", [rep.id]);
+    const r = (await getCaseDetail("report", rep.id))!;
+    expect(r).toMatchObject({ kind: "report", name: "Kham", status: "in_progress", urgent: true });
+    expect(r.items).toHaveLength(2);
+    expect(r.events[0]).toMatchObject({ type: "created", actor: "Kham", topics: ["computer"] });
+    expect(JSON.stringify(r)).not.toContain("ความลับ"); // ไม่ส่งบันทึกภายในให้หัวหน้า
+
+    await sql("INSERT INTO ticket_events (conversation_id, ticket_no, type, actor) VALUES (1,'Ticket01-01-2026-001','created','')");
+    const c = (await getCaseDetail("chat", 1))!;
+    expect(c).toMatchObject({ kind: "chat", name: "Somchai", department: "Front Office", contact: "101", status: "new", messages: null, messagesState: "no_token" });
+    expect(c.events.map((e) => e.type)).toEqual(["created"]);
+    expect(await getCaseDetail("chat", 999)).toBeNull();
+    expect(await getCaseDetail("report", 999)).toBeNull();
   });
 });

@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fmtTime, labelName } from "@/lib/adminClient";
+import { api, fmtTime, labelName } from "@/lib/adminClient";
+import type { MessageDTO } from "@/lib/adminTypes";
+import type { CaseDetail } from "@/lib/caseDetail";
 import { DEPARTMENTS } from "@/lib/categories";
 import type { Bucket, CaseRow, Dashboard, Kind } from "@/lib/dashboard";
 import type { Lang, MsgKey } from "@/lib/i18n";
 import { useLive } from "@/lib/useLive";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
+import { ReportFiles } from "./ReportFiles";
 import { StaffHeader } from "./StaffHeader";
 
 type Res = ({ enabled: false } | ({ enabled: true } & Dashboard)) | null;
@@ -40,6 +43,7 @@ function Dash({ name }: { name: string }) {
   const [q, setQ] = useState(""); // ค่าค้นหาที่ผ่าน debounce แล้ว
   const [page, setPage] = useState(1);
   const [updated, setUpdated] = useState("");
+  const [open, setOpen] = useState<{ kind: Kind; id: number } | null>(null);
   const seq = useRef(0);
 
   useEffect(() => {
@@ -186,7 +190,7 @@ function Dash({ name }: { name: string }) {
               </div>
               <ul className="mt-1 divide-y divide-stone-100">
                 {d.cases.map((c) => (
-                  <CaseItem key={`${c.kind}-${c.id}`} c={c} />
+                  <CaseItem key={`${c.kind}-${c.id}`} c={c} onOpen={() => setOpen({ kind: c.kind, id: c.id })} />
                 ))}
               </ul>
               <div className="mt-4 flex items-center justify-between gap-3 text-sm">
@@ -210,9 +214,12 @@ function Dash({ name }: { name: string }) {
               </div>
             </>
           )}
-          <p className="mt-4 border-t border-stone-100 pt-3 text-xs text-stone-500">{t("mgrChatNote")}</p>
+          <p className="mt-4 border-t border-stone-100 pt-3 text-xs text-stone-500">
+            {t("mgrOpenHint")} · {t("mgrChatNote")}
+          </p>
         </section>
       </main>
+      {open && <CaseModal target={open} onClose={() => setOpen(null)} />}
     </div>
   );
 }
@@ -346,32 +353,234 @@ function Chips<T extends string>({ label, value, onChange, options }: { label: s
   );
 }
 
-function CaseItem({ c }: { c: CaseRow }) {
+function CaseItem({ c, onOpen }: { c: CaseRow; onOpen: () => void }) {
   const { t, lang } = useI18n();
   const dept = DEPARTMENTS.find((x) => x.label.en === c.department)?.label[lang] ?? c.department;
   const topics = c.topics.filter((x) => x !== "cosi-urgent").map((x) => labelName(x, lang));
   return (
-    <li className="grid gap-x-3 gap-y-1 px-2 py-3 md:grid-cols-[10rem_1fr_1fr_1fr_7rem_7rem] md:items-center">
-      <div className="flex items-center gap-1.5 text-xs">
-        <Icon name={c.kind === "chat" ? "chat" : "clipboard"} className="h-3.5 w-3.5 shrink-0 text-deep-700" />
-        <span className="font-semibold text-brand-700">{c.ticketNo.replace("Ticket", "")}</span>
-        {c.urgent && <span className="rounded bg-rose-600 px-1 text-[10px] font-bold text-white">{lang === "lo" ? "ດ່ວນ" : "URGENT"}</span>}
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="grid w-full cursor-pointer gap-x-3 gap-y-1 rounded-lg px-2 py-3 text-left transition hover:bg-stone-50 focus-visible:bg-stone-50 focus-visible:outline-2 focus-visible:outline-brand-500 md:grid-cols-[10rem_1fr_1fr_1fr_7rem_7rem] md:items-center"
+      >
+        <span className="flex items-center gap-1.5 text-xs">
+          <Icon name={c.kind === "chat" ? "chat" : "clipboard"} className="h-3.5 w-3.5 shrink-0 text-deep-700" />
+          <span className="font-semibold text-brand-700">{c.ticketNo.replace("Ticket", "")}</span>
+          {c.urgent && <span className="rounded bg-rose-600 px-1 text-[10px] font-bold text-white">{lang === "lo" ? "ດ່ວນ" : "URGENT"}</span>}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold">{c.name || "—"}</span>
+          <span className="block truncate text-xs text-stone-500">{dept}</span>
+        </span>
+        <span className="min-w-0 truncate text-sm text-stone-700">
+          {topics.join(", ") || "—"}
+          {c.kind === "report" && c.itemsTotal > 0 && <span className="ml-1 text-xs text-stone-500">· {t("mgrItems", { done: c.itemsDone, total: c.itemsTotal })}</span>}
+        </span>
+        <span className="min-w-0 truncate text-sm text-stone-700">{c.assignee || <span className="text-stone-400">{t("mgrNoHandler")}</span>}</span>
+        <span className="text-xs text-stone-600">
+          {fmtTime(c.createdAt)}
+          {c.doneAt ? <span className="block text-stone-400">{t("mgrColDone")} {fmtTime(c.doneAt)}</span> : null}
+        </span>
+        <span>
+          <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${BUCKET_CLS[c.status]}`}>{t(BUCKET_LABEL[c.status])}</span>
+        </span>
+      </button>
+    </li>
+  );
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const fullTime = (sec: number | null) => {
+  if (!sec) return "—";
+  const d = new Date(sec * 1000);
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+
+const EVENT_LABEL: Record<string, MsgKey> = {
+  created: "evCreated",
+  greeted: "evGreeted",
+  replied: "evReplied",
+  note: "evNote",
+  topic_closed: "evTopicClosed",
+  assigned: "evAssigned",
+  resolved: "evResolved",
+  reopened: "evReopened",
+  started: "evStarted",
+  item_done: "evItemDone",
+  item_undone: "evItemUndone",
+  done: "evDone",
+};
+
+/** หน้าต่างรายละเอียดเคส (อ่านอย่างเดียว): ข้อมูลผู้แจ้ง, ข้อย่อย/ข้อความแชท, ไฟล์แนบ, ประวัติ */
+function CaseModal({ target, onClose }: { target: { kind: Kind; id: number }; onClose: () => void }) {
+  const { t, lang } = useI18n();
+  const [detail, setDetail] = useState<CaseDetail | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    api<{ detail: CaseDetail }>(`/api/manager/cases/${target.kind}/${target.id}`)
+      .then((r) => live && setDetail(r.detail))
+      .catch(() => live && setError(true));
+    return () => {
+      live = false;
+    };
+  }, [target.kind, target.id]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  const d = detail;
+  const dept = d ? DEPARTMENTS.find((x) => x.label.en === d.department)?.label[lang] ?? d.department : "";
+  const topicName = (x: string) => labelName(x, lang);
+  const row = (label: string, value: React.ReactNode) => (
+    <div className="min-w-0">
+      <dt className="text-xs text-stone-500">{label}</dt>
+      <dd className="mt-0.5 truncate text-sm font-medium">{value}</dd>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-3 sm:p-6" onClick={onClose} role="presentation">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("mgrDetail")}
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-stone-100 bg-white px-4 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2">
+            <Icon name={target.kind === "chat" ? "chat" : "clipboard"} className="h-4 w-4 shrink-0 text-deep-700" />
+            <h2 className="truncate text-base font-semibold">
+              {d ? d.ticketNo.replace("Ticket", "") : t("mgrDetail")}
+            </h2>
+            {d?.urgent && <span className="rounded bg-rose-600 px-1.5 text-[10px] font-bold text-white">{lang === "lo" ? "ດ່ວນ" : "URGENT"}</span>}
+            {d && <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${BUCKET_CLS[d.status]}`}>{t(BUCKET_LABEL[d.status])}</span>}
+          </div>
+          <button type="button" onClick={onClose} className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold text-stone-600 hover:bg-stone-100">
+            {t("mgrClose")}
+          </button>
+        </div>
+
+        <div className="space-y-5 px-4 py-4 sm:px-5">
+          {!d && !error && <div className="h-32 animate-pulse rounded-xl bg-stone-100" aria-label={t("mgrDetailLoading")} />}
+          {error && (
+            <p role="alert" className="text-sm text-rose-700">
+              {t("mgrDetailErr")}
+            </p>
+          )}
+          {d && (
+            <>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                {row(t("mgrColFrom"), d.name || "—")}
+                {row(t("fieldDept"), dept || "—")}
+                {row(t("mgrContact"), d.contact || "—")}
+                {row(t("mgrColHandler"), d.assignee || t("mgrNoHandler"))}
+                {row(t("mgrColCreated"), fullTime(d.createdAt))}
+                {row(t("mgrFirstResponse"), fullTime(d.firstResponseAt))}
+                {row(t("mgrColDone"), fullTime(d.doneAt))}
+              </dl>
+              {d.topics.filter((x) => x !== "cosi-urgent").length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {d.topics
+                    .filter((x) => x !== "cosi-urgent")
+                    .map((x) => (
+                      <span key={x} className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${d.closedTopics.includes(topicName(x)) || d.closedTopics.includes(x) ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-stone-50 text-stone-700 ring-stone-200"}`}>
+                        {topicName(x)}
+                      </span>
+                    ))}
+                </div>
+              )}
+
+              {d.kind === "report" && d.items.length > 0 && (
+                <section>
+                  <h3 className="text-sm font-semibold">
+                    {t("mgrIssueList")} <span className="text-xs font-normal text-stone-500">({t("mgrItems", { done: d.items.filter((i) => i.done).length, total: d.items.length })})</span>
+                  </h3>
+                  <ul className="mt-2 space-y-1.5">
+                    {d.items.map((i) => (
+                      <li key={i.id} className="flex items-start gap-2.5 rounded-lg bg-stone-50 px-3 py-2 text-sm">
+                        <span className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded ${i.done ? "bg-emerald-500 text-white" : "border border-stone-300 bg-white"}`}>
+                          {i.done && <Icon name="check" className="h-3 w-3" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className={i.done ? "text-stone-500 line-through" : ""}>{i.text}</span>
+                          <span className="block text-xs text-stone-500">
+                            {topicName(`cosi-${i.topic}`)}
+                            {i.done && i.doneBy ? ` · ${t("mgrFixedBy", { name: i.doneBy })}` : ""}
+                            {i.done && i.doneAt ? ` · ${fullTime(i.doneAt)}` : ""}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {d.kind === "report" && d.files.length > 0 && <ReportFiles files={d.files} title={t("mgrAttachments")} />}
+
+              {d.kind === "chat" && (
+                <section>
+                  <h3 className="text-sm font-semibold">{t("mgrMessages")}</h3>
+                  {d.messagesState === "no_token" && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{t("mgrMsgNoToken")}</p>}
+                  {d.messagesState === "error" && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{t("mgrMsgError")}</p>}
+                  {d.messagesState === "ok" && d.messages && d.messages.length === 0 && <p className="mt-2 text-sm text-stone-500">{t("mgrMsgEmpty")}</p>}
+                  {d.messages && d.messages.length > 0 && (
+                    <ul className="mt-2 space-y-2">
+                      {d.messages.map((m) => (
+                        <Bubble key={m.id} m={m} />
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              )}
+
+              <section>
+                <h3 className="text-sm font-semibold">{t("mgrTimeline")}</h3>
+                <ol className="mt-2 space-y-1.5 border-l-2 border-stone-200 pl-4">
+                  {d.events.map((e, i) => (
+                    <li key={i} className="relative text-sm">
+                      <span aria-hidden className="absolute -left-[1.4rem] top-1.5 h-2 w-2 rounded-full bg-deep-700" />
+                      <span className="font-medium">{EVENT_LABEL[e.type] ? t(EVENT_LABEL[e.type]) : e.type}</span>
+                      {e.actor && <span className="text-stone-600"> · {e.actor}</span>}
+                      <span className="block text-xs text-stone-500">{fullTime(e.at)}</span>
+                    </li>
+                  ))}
+                  {d.events.length === 0 && <li className="text-sm text-stone-500">—</li>}
+                </ol>
+                <p className="mt-3 text-xs text-stone-400">{t("mgrNoteHidden")}</p>
+              </section>
+            </>
+          )}
+        </div>
       </div>
-      <div className="min-w-0">
-        <div className="truncate text-sm font-semibold">{c.name || "—"}</div>
-        <div className="truncate text-xs text-stone-500">{dept}</div>
-      </div>
-      <div className="min-w-0 truncate text-sm text-stone-700">
-        {topics.join(", ") || "—"}
-        {c.kind === "report" && c.itemsTotal > 0 && <span className="ml-1 text-xs text-stone-500">· {t("mgrItems", { done: c.itemsDone, total: c.itemsTotal })}</span>}
-      </div>
-      <div className="min-w-0 truncate text-sm text-stone-700">{c.assignee || <span className="text-stone-400">{t("mgrNoHandler")}</span>}</div>
-      <div className="text-xs text-stone-600">
-        {fmtTime(c.createdAt)}
-        {c.doneAt ? <div className="text-stone-400">{t("mgrColDone")} {fmtTime(c.doneAt)}</div> : null}
-      </div>
-      <div>
-        <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${BUCKET_CLS[c.status]}`}>{t(BUCKET_LABEL[c.status])}</span>
+    </div>
+  );
+}
+
+function Bubble({ m }: { m: MessageDTO }) {
+  const incoming = m.kind === "incoming";
+  return (
+    <li className={`flex ${incoming ? "justify-start" : "justify-end"}`}>
+      <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${incoming ? "bg-stone-100 text-stone-900" : "bg-deep-700 text-white"}`}>
+        <div className={`text-[11px] ${incoming ? "text-stone-500" : "text-white/70"}`}>
+          {m.senderName || (incoming ? "—" : "IT")} · {fullTime(m.createdAt)}
+        </div>
+        {m.content && <p className="mt-0.5 whitespace-pre-wrap break-words">{m.content}</p>}
+        {m.attachments.map((a) => (
+          <a key={a.id} href={a.url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs underline">
+            📎 {a.name}
+          </a>
+        ))}
       </div>
     </li>
   );

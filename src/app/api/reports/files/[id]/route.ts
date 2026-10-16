@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
 import { parseId } from "@/lib/adminApi";
 import { dbEnabled } from "@/lib/db";
+import { getManager } from "@/lib/managerSession";
 import { getSession } from "@/lib/session";
 import { getStoredFile } from "@/lib/uploads";
 
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 /**
- * ส่งไฟล์แนบ (รูป/วิดีโอ): ทีมไอทีที่ล็อกอินดูได้ทุกไฟล์, เจ้าของรายงานดูได้ด้วย ?who=<identifier> (ตรงกับผู้ส่ง)
+ * ส่งไฟล์แนบ (รูป/วิดีโอ): ทีมไอทีและหัวหน้าที่ล็อกอินดูได้ทุกไฟล์, เจ้าของรายงานดูได้ด้วย ?who=<identifier> (ตรงกับผู้ส่ง)
  * รองรับ Range เพื่อให้วิดีโอเลื่อนดูได้
  */
 export async function GET(req: Request, { params }: Ctx) {
@@ -28,6 +29,8 @@ export async function GET(req: Request, { params }: Ctx) {
   } catch {
     admin = false;
   }
+  // หัวหน้าโรงแรม (แดชบอร์ด /manager) ดูไฟล์แนบได้ทุกไฟล์ด้วย
+  if (!admin) admin = (await getManager()) !== null;
   const who = new URL(req.url).searchParams.get("who") ?? "";
   const owner = who !== "" && (who === f.ownerIdentifier || (f.reportId === null && who === f.uploader));
   if (!admin && !owner) return NextResponse.json({ error: "not_found" }, { status: 404 });
