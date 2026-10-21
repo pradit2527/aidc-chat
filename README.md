@@ -112,7 +112,8 @@ Function Region = Singapore (sin1)** ให้ฟังก์ชันอยู�
 พอร์ต 3400 ไม่ชนกับโปรเจกต์อื่นบนเครื่องนั้น (web-portal 3009, trion-lidar 8080)
 
 1. ครั้งแรก: ใส่กุญแจ SSH ของเครื่องพัฒนาไว้บนเซิร์ฟเวอร์ และสร้าง `~/apps/aidc-chat/.env.production` (คีย์เดียวกับ `.env.example`
-   แต่ `PORTAL_PUBLIC_URL=http://10.0.100.54:3400` และ `SESSION_SECRET` สุ่มใหม่) — ไฟล์นี้อยู่บนเซิร์ฟเวอร์เท่านั้น
+   แต่ `PORTAL_PUBLIC_URL=https://ticket.aidclaos.com` (โดเมนผ่าน Cloudflare ที่ชี้มาเครื่องนี้ — ใช้ทั้ง QR และลิงก์ในแจ้งเตือน WhatsApp, ผู้ใช้สั่ง 21 ต.ค. 2026)
+   และ `SESSION_SECRET` สุ่มใหม่) — ไฟล์นี้อยู่บนเซิร์ฟเวอร์เท่านั้น
 2. ทุกครั้งที่จะอัปเดต: commit แล้วรัน `npm run deploy:server` — ส่งโค้ดจาก `git archive HEAD` ผ่าน SSH แล้ว `docker compose up -d --build`
 3. ดูสถานะ/ล็อกบนเซิร์ฟเวอร์: `cd ~/apps/aidc-chat && docker compose ps && docker compose logs --tail 100`
 
