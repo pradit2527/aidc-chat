@@ -55,13 +55,10 @@ export default function AdminHub({ user, onSignedOut, chat = false }: { user: Ad
   const pendingReports = reports?.enabled ? reports.summary.new + reports.summary.inProgress : 0;
   const dept = (id: string) => DEPARTMENTS.find((d) => d.id === id)?.label[lang] ?? id;
 
-  // แถบสถานะแจ้งเตือนกลุ่ม WhatsApp (เฉพาะเครื่องที่เปิด WHATSAPP_DEVICE): เชื่อมต่อ + มีกลุ่ม → เขียว, ไม่งั้นเหลืองชวนไปสแกน
+  // แจ้งเตือนกลุ่ม WhatsApp ทำงานเบื้องหลัง (ผู้ใช้ไม่ต้องการเห็นหน้าตั้งค่า) — แสดงแถบเหลืองเฉพาะตอนหลุด/ยังไม่ได้สแกน
+  // ให้กดไป /admin/whatsapp สแกน QR ใหม่ (หน้านั้นไม่มีในเมนู)
   const waAlert =
-    wa && wa.db && wa.device.enabled
-      ? wa.device.status === "open" && wa.device.group
-        ? { ok: true, text: t("waHubGroupReady", { group: wa.device.group }) }
-        : { ok: false, text: t("waHubAlertGroup") }
-      : null;
+    wa && wa.db && wa.device.enabled && !(wa.device.status === "open" && wa.device.group) ? { ok: false, text: t("waHubAlertGroup") } : null;
 
   return (
     <div className="min-h-screen">
