@@ -49,5 +49,5 @@ export function formatReportNotice(r: NoticeReport, link: string): string {
 
 /** ข้อความทดสอบจากหน้า /admin/whatsapp */
 export function formatTestNotice(nowSec = Math.floor(Date.now() / 1000)): string {
-  return `✅ ທົດສອບການແຈ້ງເຕືອນຈາກ Helpdesk Support (COSI Hotel) — ຖ້າເຫັນຂໍ້ຄວາມນີ້ ແປວ່າຕັ້ງຄ່າສຳເລັດ\n🕒 ${ticketDate(nowSec)} ${laoTime(nowSec)}`;
+  return `✅ ທົດສອບການແຈ້ງເຕືອນຈາກລະບົບ Ticket Support (COSI Hotel) — ຖ້າເຫັນຂໍ້ຄວາມນີ້ ແປວ່າຕັ້ງຄ່າສຳເລັດ\n🕒 ${ticketDate(nowSec)} ${laoTime(nowSec)}`;
 }

@@ -3,7 +3,7 @@
 import { CATEGORIES, DEPARTMENTS } from "./categories";
 import { db, dbEnabled, q } from "./db";
 import { lockTicketDay, nextTicketSeq } from "./ticketRegistry";
-import { formatTicket, ticketDate } from "./tickets";
+import { formatTicket, isTicketNo, ticketDate } from "./tickets";
 import { fileKind, type ReportFileDTO } from "./uploadRules";
 
 export type ReportStatus = "new" | "in_progress" | "done";
@@ -209,8 +209,7 @@ export async function getReport(id: number): Promise<ReportDTO | null> {
   return rows[0] ? toDTO(rows[0]) : null;
 }
 
-/** รูปแบบเลขตั๋ว เช่น Ticket21-10-2026-009 */
-export const isTicketNo = (v: unknown): v is string => typeof v === "string" && /^Ticket\d{2}-\d{2}-\d{4}-\d{3,}$/.test(v);
+export { isTicketNo } from "./tickets";
 
 /** id ของรายงานจากเลขตั๋ว (ลิงก์ในแจ้งเตือน WhatsApp ใช้เลขตั๋ว) — ไม่พบ → null */
 export async function findReportIdByTicket(ticketNo: string): Promise<number | null> {

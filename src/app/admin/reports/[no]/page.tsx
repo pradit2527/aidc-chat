@@ -11,7 +11,7 @@ import { findReportIdByTicket, isTicketNo } from "@/lib/reports";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "IT Helpdesk · ງານແຈ້ງບັນຫາ",
+  title: "Ticket Support · ງານແຈ້ງບັນຫາ",
   robots: { index: false, follow: false },
 };
 

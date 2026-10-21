@@ -116,7 +116,6 @@ const M = {
 
   // ---- คอนโซลทีมไอที (/admin) ----
   admTitle: { lo: "Ticket Support", en: "Ticket Support" },
-  admBrand: { lo: "IT Helpdesk", en: "IT Helpdesk" },
   admLoginTitle: { lo: "ເຂົ້າສູ່ລະບົບທີມໄອທີ", en: "IT team sign in" },
   admLoginHint: {
     lo: "ໃຊ້ອີເມວ + ລະຫັດຜ່ານ Chatwoot ຫຼື ຊື່ຜູ້ໃຊ້ + ລະຫັດຜ່ານຂອງແອດມິນທີ່ຖືກສ້າງໃຫ້",
@@ -332,7 +331,7 @@ const M = {
   hubPrev: { lo: "ກ່ອນໜ້າ", en: "Previous" },
   hubNext: { lo: "ຖັດໄປ", en: "Next" },
   // ---- หน้าหลักทีมไอที (/admin หลังล็อกอิน) ----
-  ahTitle: { lo: "Helpdesk Support", en: "Helpdesk Support" },
+  ahTitle: { lo: "Ticket Support", en: "Ticket Support" },
   ahSub: { lo: "ສະບາຍດີ {name} — ເລືອກລະບົບແຊັດ ຫຼື ງານແຈ້ງບັນຫາ, ຫຼືກົດລາຍການທີ່ຄ້າງຢູ່ດ້ານລຸ່ມໄດ້ເລີຍ", en: "Hello {name} — open the chat or reports console, or jump straight into a pending item below" },
   ahChat: { lo: "ລະບົບແຊັດ", en: "Chat console" },
   ahChatHint: { lo: "ຕອບແຊັດພະນັກງານ, ປິດເຄສ, ມອບໝາຍ", en: "Reply to staff chats, close cases, assign" },

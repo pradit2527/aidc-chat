@@ -50,10 +50,7 @@ export function AdminHeader(props: Props) {
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <AidcLogo className="h-11" />
-            <div className="min-w-0 leading-tight">
-              <div className="truncate text-sm font-semibold">{barTitle ?? t("admTitle")}</div>
-              <div className="text-xs text-white/75">{t("admBrand")}</div>
-            </div>
+            <div className="min-w-0 truncate text-base font-semibold">{barTitle ?? t("admTitle")}</div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             {extra}

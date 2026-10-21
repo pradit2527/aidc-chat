@@ -93,10 +93,7 @@ function Login({ onDone, next }: { onDone: (u: AdminUser) => void; next: string 
         <div className="mb-4 flex items-center justify-between text-white">
           <div className="flex items-center gap-3">
             <AidcLogo className="h-12" />
-            <div className="leading-tight">
-              <div className="text-sm font-semibold">{t("admBrand")}</div>
-              <div className="text-xs text-white/80">{t("admTitle")}</div>
-            </div>
+            <div className="text-base font-semibold">{t("admTitle")}</div>
           </div>
           <div className="flex rounded-full bg-white/15 p-0.5 ring-1 ring-white/25" role="group" aria-label="Language">
             {LANGS.map((l) => (

@@ -19,7 +19,6 @@ describe("i18n", () => {
     expect(translate("en", "heroTitle")).toBe("Problem Reporting System");
     expect(translate("lo", "step1Title")).toBe("1. ຜູ້ໃຊ້ງານ");
     expect(translate("en", "admTitle")).toBe("Ticket Support");
-    expect(translate("en", "admBrand")).toBe("IT Helpdesk");
   });
 
   test("แทนที่ตัวแปร {n} {h} {m} ได้ทุกตำแหน่ง", () => {

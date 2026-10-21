@@ -552,7 +552,6 @@ export default function AdminConsole({ user, onSignedOut, demo = false, initialC
             <AidcLogo className="h-11" />
             <div className="min-w-0 leading-tight">
               <div className="truncate text-sm font-semibold">{t("admTitle")}</div>
-              <div className="hidden text-xs text-white/75 sm:block">{t("admBrand")}</div>
             </div>
             {unreadTotal > 0 && <UnreadBadge n={unreadTotal} className="ml-1" />}
           </div>

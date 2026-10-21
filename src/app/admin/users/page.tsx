@@ -8,7 +8,7 @@ import { getSession } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "IT Helpdesk · ຜູ້ໃຊ້ງານ",
+  title: "Ticket Support · ຜູ້ໃຊ້ງານ",
   robots: { index: false, follow: false },
 };
 

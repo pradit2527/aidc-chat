@@ -23,7 +23,21 @@ export function laoTime(sec: number): string {
   return `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
 }
 
-export const formatTicket = (date: string, seq: number) => `Ticket${date}-${String(seq).padStart(3, "0")}`;
+/**
+ * คำนำหน้าเลขตั๋ว = ชื่อย่อบริษัทที่แจ้ง ตัวพิมพ์เล็ก (ผู้ใช้สั่ง 21 ต.ค. 2026: "cosi-21-10-2026-013" จำง่ายกว่า)
+ * ตั้งได้ด้วย TICKET_PREFIX (ค่าเริ่มต้น cosi) — เก็บเฉพาะ a-z 0-9 ไม่เกิน 12 ตัว
+ */
+export function ticketPrefix(): string {
+  const raw = (process.env.TICKET_PREFIX ?? "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12);
+  return raw.length >= 2 ? raw : "cosi";
+}
+
+/** "cosi-13-10-2026-001" — เลขตั๋วใหม่ตัวพิมพ์เล็กทั้งหมด (ตั๋วเก่าในฐานข้อมูลยังเป็น Ticket13-10-2026-001 และยังเปิดได้) */
+export const formatTicket = (date: string, seq: number) => `${ticketPrefix()}-${date}-${String(seq).padStart(3, "0")}`;
+
+/** รูปแบบเลขตั๋วที่ยอมรับ: แบบใหม่ <บริษัท>-dd-mm-yyyy-nnn หรือแบบเก่า Ticketdd-mm-yyyy-nnn */
+export const isTicketNo = (v: unknown): v is string =>
+  typeof v === "string" && /^([a-z0-9]{2,12}-|Ticket)\d{2}-\d{2}-\d{4}-\d{3,}$/.test(v);
 
 /** กำหนดเลขตั๋วให้ทุกเคส: จัดกลุ่มตามวันที่สร้าง แล้วเรียงตามเลขเคส (id) นับ 1,2,3… */
 export function assignTickets(rows: { id: number; createdAt: number }[]): Map<number, string> {

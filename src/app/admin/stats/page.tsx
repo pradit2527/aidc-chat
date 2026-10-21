@@ -17,7 +17,7 @@ import { laoTime, ticketDate } from "@/lib/tickets";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "IT Helpdesk · Ticket statistics",
+  title: "Ticket Support · Ticket statistics",
   robots: { index: false, follow: false },
 };
 

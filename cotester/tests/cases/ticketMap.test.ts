@@ -56,8 +56,8 @@ describe("ticketMap (แบบคำนวณ) — cache 20 วินาที",
   test("ให้เลขตั๋วตามวันและลำดับ id และเรียกซ้ำภายใน TTL ไม่ดึง Chatwoot อีก", async () => {
     const cw = fakeChatwoot(5, 60);
     const first = await ticketMap(cw.fetchJson, NOW);
-    expect(first.get(1000)).toBe("Ticket13-10-2026-005"); // id มากสุด = ลำดับท้าย
-    expect(first.get(996)).toBe("Ticket13-10-2026-001");
+    expect(first.get(1000)).toBe("cosi-13-10-2026-005"); // id มากสุด = ลำดับท้าย
+    expect(first.get(996)).toBe("cosi-13-10-2026-001");
     const n = cw.calls.length;
     const second = await ticketMap(cw.fetchJson, NOW + 5);
     expect(second).toBe(first); // object เดิมจาก cache

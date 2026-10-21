@@ -86,7 +86,7 @@ describe("ส่งรายงาน (POST /api/reports)", () => {
     });
     expect(r.status).toBe(201);
     const j = r.json as { id: number; ticketNo: string };
-    expect(j.ticketNo).toMatch(/^Ticket\d{2}-\d{2}-\d{4}-001$/);
+    expect(j.ticketNo).toMatch(/^cosi-\d{2}-\d{2}-\d{4}-001$/); // คำนำหน้า = บริษัท ตัวพิมพ์เล็ก (ผู้ใช้สั่ง)
     ticketNo = j.ticketNo;
     reportId = j.id;
     const items = await q("SELECT topic, text, position FROM report_items WHERE report_id = $1 ORDER BY position", [reportId]);
@@ -145,13 +145,19 @@ describe("คอนโซลไอที (/admin/reports)", () => {
     const r = await anon.get(path);
     expect([307, 308]).toContain(r.status);
     expect(r.redirect).toContain(`/admin?next=${encodeURIComponent(path)}`);
+    // ลิงก์สั้นในแจ้งเตือน WhatsApp: /<เลขตั๋ว> → หน้ารายละเอียดตั๋ว (ตัวพิมพ์ใหญ่/รูปแบบเก่าก็ยังเปิดได้)
+    const short = await anon.get(`/${ticketNo}`);
+    expect([307, 308]).toContain(short.status);
+    expect(short.redirect?.endsWith(path)).toBe(true);
+    expect([307, 308]).toContain((await anon.get("/Ticket01-01-2000-001")).status);
+    expect((await anon.get("/not-a-ticket")).status).toBe(404);
     // ล็อกอินค้างอยู่แล้วเปิด /admin?next=… → เด้งไปตั๋วทันที (ไม่ต้องกรอกซ้ำ)
     const back = await admin.get(`/admin?next=${encodeURIComponent(path)}`);
     expect([307, 308]).toContain(back.status);
     expect(back.redirect?.endsWith(path)).toBe(true);
     const page = await admin.get(path);
     expect(page.status).toBe(200);
-    expect(page.text).toContain("IT Helpdesk");
+    expect(page.text).toContain("Ticket Support");
     const missing = await admin.get("/admin/reports/Ticket01-01-2000-999");
     expect([307, 308]).toContain(missing.status);
     expect(missing.redirect?.endsWith("/admin/reports")).toBe(true);

@@ -20,7 +20,7 @@ d(`ระบบที่ติดตั้งแล้ว: ${URL ?? "(ไม่�
       expect(r.status).toBe(200);
       expect(r.text).not.toContain("ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ");
     }
-    expect((await c.get("/admin")).text).toContain("IT Helpdesk");
+    expect((await c.get("/admin")).text).toContain("Ticket Support");
   });
 
   test("QR บนหน้าแรกชี้ไปหน้าล็อกอิน /login ของโฮสต์นี้ และ /start, /report เด้งไปล็อกอินเมื่อยังไม่ล็อกอิน", async () => {

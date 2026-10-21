@@ -2,7 +2,7 @@
 // รันกับ Chatwoot จำลอง (cotester/e2e/mock-chatwoot.mjs) และฐานทดสอบ aidc_chat_test (ล้างก่อน/หลัง)
 import { neon } from "@neondatabase/serverless";
 import { AUTO_GREETING_TEXT } from "@/lib/autoGreeting";
-import { ticketDate } from "@/lib/tickets";
+import { formatTicket, ticketDate } from "@/lib/tickets";
 import { Client, waitFor } from "./client";
 
 const DB = process.env.E2E_DATABASE_URL ?? "";
@@ -46,7 +46,7 @@ function expectedTickets(all: Conv[]) {
     byDay.set(d, [...(byDay.get(d) ?? []), cv]);
   }
   const out = new Map<number, string>();
-  for (const [d, convs] of byDay) convs.forEach((cv, i) => out.set(cv.id, `Ticket${d}-${String(i + 1).padStart(3, "0")}`));
+  for (const [d, convs] of byDay) convs.forEach((cv, i) => out.set(cv.id, formatTicket(d, i + 1)));
   return out;
 }
 
@@ -73,7 +73,7 @@ describe("1. ล็อกอิน", () => {
   test("หลังล็อกอิน /admin = หน้าหลักทีมไอที (เลือกแชท/แจ้งปัญหา), /admin/chat = คอนโซลแชท, ?c= เปิดเคสได้", async () => {
     const hub = await c.get("/admin");
     expect(hub.status).toBe(200);
-    expect(hub.text).toContain("Helpdesk Support");
+    expect(hub.text).toContain("Ticket Support");
     expect(hub.text).toContain('href="/admin/chat"');
     expect(hub.text).toContain('href="/admin/reports"');
     expect(hub.text).not.toMatch(/type="password"/);
@@ -264,7 +264,7 @@ describe("8. สถิติจากทะเบียน", () => {
     expect(s.perAgent.find((a: { agent: string }) => a.agent === AGENT).total).toBeGreaterThanOrEqual(4);
     expect(s.recent).toHaveLength(5);
     expect(s.recent[0].id).toBe(20); // สร้างล่าสุด
-    expect(s.recent.every((r: { ticketNo: string }) => /^Ticket\d{2}-\d{2}-\d{4}-\d{3}$/.test(r.ticketNo))).toBe(true);
+    expect(s.recent.every((r: { ticketNo: string }) => /^cosi-\d{2}-\d{2}-\d{4}-\d{3}$/.test(r.ticketNo))).toBe(true);
   });
   test("ช่วงวัน: ค่าไม่ถูกต้อง/0 → ค่าเริ่มต้น 14, ติดลบ → 1, เกิน → 365", async () => {
     expect((await stats("?days=abc")).days).toBe(14);

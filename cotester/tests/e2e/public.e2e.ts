@@ -109,11 +109,11 @@ describe("หน้าเว็บสาธารณะ", () => {
     expect(r.text).toContain("Wi-Fi / Internet");
   });
 
-  test("/admin และ /admin/chat ยังไม่ล็อกอิน = หน้าล็อกอินแบรนด์ IT Helpdesk ที่ไม่ให้ search engine เก็บ", async () => {
+  test("/admin และ /admin/chat ยังไม่ล็อกอิน = หน้าล็อกอินแบรนด์ Ticket Support ที่ไม่ให้ search engine เก็บ", async () => {
     for (const p of ["/admin", "/admin/chat"]) {
       const r = await c.get(p);
       expect(r.status).toBe(200);
-      expect(r.text).toContain("IT Helpdesk");
+      expect(r.text).toContain("Ticket Support");
       expect(r.text).toMatch(/type="password"/);
       expect(r.text).toMatch(/noindex/);
     }

@@ -77,7 +77,7 @@ describe("formatReportNotice / formatTestNotice", () => {
   const NOON_LAO = Date.UTC(2026, 9, 20, 5) / 1000; // 2026-10-20 05:00 UTC = 12:00 เวลาลาว (UTC+7)
   const report: ReportDTO = {
     id: 12,
-    ticketNo: "Ticket19-10-2026-003",
+    ticketNo: "cosi-19-10-2026-003",
     name: "ສົມຊາຍ ວົງສາ",
     department: "front-office",
     contact: "205",
@@ -101,7 +101,7 @@ describe("formatReportNotice / formatTestNotice", () => {
   };
   test("ขึ้นต้น 'ท่าน <ชื่อ> (แผนก) ได้แจ้งปัญหาในระบบ Ticket แล้ว' + เลขตั๋ว ด่วน เวลาลาว เบอร์ ข้อจัดกลุ่มตามหัวข้อเรียงเลขต่อเนื่อง จำนวนไฟล์ ลิงก์", () => {
     const text = formatReportNotice(report, "http://10.0.100.54:3400/admin/reports?r=12");
-    expect(text.startsWith("🎫 *Ticket19-10-2026-003* · 🔴 *ດ່ວນ*\n🆕 ທ່ານ *ສົມຊາຍ ວົງສາ* (ຕ້ອນຮັບ) ໄດ້ແຈ້ງບັນຫາໃນລະບົບ Ticket ແລ້ວ\n")).toBe(true);
+    expect(text.startsWith("🎫 *cosi-19-10-2026-003* · 🔴 *ດ່ວນ*\n🆕 ທ່ານ *ສົມຊາຍ ວົງສາ* (ຕ້ອນຮັບ) ໄດ້ແຈ້ງບັນຫາໃນລະບົບ Ticket ແລ້ວ\n")).toBe(true);
     expect(text).toContain("📌 ຫົວຂໍ້: Wi-Fi / ອິນເຕີເນັດ, ຄອມພິວເຕີ / ເຄື່ອງພິມ"); // หัวข้อที่แจ้ง (ผู้ใช้สั่ง)
     expect(text).toContain("🕒 20-10-2026 12:00 · ☎ 205");
     expect(text).toMatch(/▪️ Wi-Fi \/ ອິນເຕີເນັດ\n {2}1\. Wi-Fi ຫ້ອງ 203 ຕໍ່ບໍ່ໄດ້\n {2}2\. ຊ້າຫຼາຍ\n▪️ ຄອມພິວເຕີ \/ ເຄື່ອງພິມ\n {2}3\. ເຄື່ອງພິມບໍ່ອອກ/);
@@ -126,6 +126,6 @@ describe("formatReportNotice / formatTestNotice", () => {
   });
   test("ข้อความทดสอบมีวันที่/เวลาลาว", () => {
     expect(formatTestNotice(NOON_LAO)).toContain("20-10-2026 12:00");
-    expect(formatTestNotice(NOON_LAO)).toContain("Helpdesk Support");
+    expect(formatTestNotice(NOON_LAO)).toContain("Ticket Support");
   });
 });

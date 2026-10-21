@@ -8,7 +8,7 @@ import { DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "IT Helpdesk · ງານແຈ້ງບັນຫາ",
+  title: "Ticket Support · ງານແຈ້ງບັນຫາ",
   robots: { index: false, follow: false },
 };
 
