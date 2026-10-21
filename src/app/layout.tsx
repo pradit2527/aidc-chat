@@ -8,7 +8,7 @@ const lao = Noto_Sans_Lao({ variable: "--font-lao", subsets: ["lao", "latin"] })
 
 export const metadata: Metadata = {
   title: "COSI Hotel · ລະບົບການແຈ້ງບັນຫາ",
-  description: "ແຊັດຫາທີມໄອທີ COSI Hotel — IT support chat for COSI Hotel staff",
+  description: "ແຈ້ງບັນຫາຫາທີມໄອທີ COSI Hotel — IT support ticket system for COSI Hotel staff",
 };
 
 export const viewport: Viewport = {

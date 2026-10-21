@@ -15,22 +15,29 @@ import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
 import { StaffHeader } from "./StaffHeader";
 
-/** หน้าหลักของพนักงาน (ปลายทาง QR): เลือก "ระบบแชท" หรือ "แจ้งปัญหา" + รายงานของฉัน (สถานะ, ผู้รับเรื่อง, หน้าละ 30) */
-export default function StartHub({ initialLang, profile }: { initialLang: Lang; profile: Profile }) {
+/**
+ * หน้าหลักของพนักงาน (หลังล็อกอิน): การ์ดผู้ใช้ (ข้อมูลจากบัญชี) + "แจ้งปัญหา" + รายงานของฉัน (สถานะ, ผู้รับเรื่อง, หน้าละ 12)
+ * chat=true (CHAT_ENABLED=1) จึงมีการ์ด "ระบบแชท" ด้วย — ค่าปกติซ่อนไว้ตามที่ผู้ใช้สั่ง
+ */
+export default function StartHub({ initialLang, profile, chat = false }: { initialLang: Lang; profile: Profile; chat?: boolean }) {
   return (
     <I18nProvider initial={initialLang}>
-      <Hub profile={profile} />
+      <Hub profile={profile} chat={chat} />
     </I18nProvider>
   );
 }
 
 type MineRes = { enabled: boolean; reports: OwnerReportRow[]; total: number; page: number; pages: number };
 
-function Hub({ profile }: { profile: Profile }) {
+function Hub({ profile, chat }: { profile: Profile; chat: boolean }) {
   const { t, lang } = useI18n();
   return (
     <div className="min-h-screen">
-      <StaffHeader title={t("hubTitle")} subtitle={t("hubSub")} steps={[t("hubChat"), t("hubReport")]} />
+      <StaffHeader
+        title={t("hubTitle")}
+        subtitle={t(chat ? "hubSub" : "hubSubReport")}
+        steps={chat ? [t("hubChat"), t("hubReport")] : [t("heroStep1"), t("heroStep2"), t("rpSend"), t("hubStepTrack")]}
+      />
       <main className="relative z-10 mx-auto -mt-8 grid max-w-5xl gap-4 px-4 pb-10">
         {/* ผู้ใช้ที่ล็อกอินอยู่ — ข้อมูลมาจากบัญชี ไม่ต้องกรอกเอง */}
         <section className="card flex items-center justify-between gap-3 p-4">
@@ -56,9 +63,9 @@ function Hub({ profile }: { profile: Profile }) {
             {t("switchUser")}
           </button>
         </section>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Choice href="/chat" n={1} icon="chat" title={t("hubChat")} hint={t("hubChatHint")} cta={t("hubGo")} />
-          <Choice href="/report" n={2} icon="clipboard" title={t("hubReport")} hint={t("hubReportHint")} cta={t("hubGo")} />
+        <div className={`grid gap-4 ${chat ? "sm:grid-cols-2" : ""}`}>
+          {chat && <Choice href="/chat" n={1} icon="chat" title={t("hubChat")} hint={t("hubChatHint")} cta={t("hubGo")} />}
+          <Choice href="/report" n={chat ? 2 : 1} icon="clipboard" title={t("hubReport")} hint={t("hubReportHint")} cta={t("hubGo")} />
         </div>
         <MyReports />
       </main>

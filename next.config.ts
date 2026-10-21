@@ -10,6 +10,10 @@ const extraOrigins = (process.env.DEV_ALLOWED_ORIGINS ?? "")
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
+  // Next 16 ยอมให้มี dev server เดียวต่อโฟลเดอร์ .next — ชุดเทส e2e ใช้ NEXT_DIST_DIR=.next-e2e เพื่อรันคู่กับ dev server ปกติได้
+  distDir: process.env.NEXT_DIST_DIR || ".next",
+  // ไลบรารี WhatsApp (Baileys) และ logger ของมันใช้ของเฉพาะ Node — ให้ require ตรง ๆ ไม่ต้องผ่าน bundler ฝั่งเซิร์ฟเวอร์
+  serverExternalPackages: ["baileys", "pino"],
   allowedDevOrigins: [
     "10.*.*.*",
     "192.168.*.*",

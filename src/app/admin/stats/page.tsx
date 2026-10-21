@@ -8,6 +8,7 @@ import type { AdminUser } from "@/lib/adminTypes";
 import { initialOf, labelName } from "@/lib/adminClient";
 import { demoStats } from "@/lib/adminDemo";
 import { dbEnabled } from "@/lib/db";
+import { chatEnabled } from "@/lib/features";
 import { DEFAULT_LANG, isLang, LANG_COOKIE, translate, type Lang, type MsgKey } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
 import { getStats, type Stats } from "@/lib/stats";
@@ -32,6 +33,9 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
   const saved = jar.get(LANG_COOKIE)?.value;
   const lang: Lang = isLang(saved) ? saved : DEFAULT_LANG;
   const t = (k: MsgKey, vars?: Record<string, string | number>) => translate(lang, k, vars);
+  // ระบบแชทซ่อนอยู่ (ค่าปกติ) → การ์ด/เลขตั๋วไม่ลิงก์ไปคอนโซลแชท
+  const chat = chatEnabled();
+  const recentHint = t(chat ? "stRecentHint" : "stRecentHintNoChat");
 
   let user: AdminUser | null = null;
   try {
@@ -81,7 +85,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="min-h-screen bg-canvas">
-      <AdminHeaderStandalone initialLang={lang} user={user} title={t("stTitle")} subtitle={t("stRecentHint")} />
+      <AdminHeaderStandalone initialLang={lang} user={user} title={t("stTitle")} subtitle={recentHint} />
 
       <main className="relative z-10 mx-auto -mt-8 max-w-6xl space-y-6 px-4 pb-10">
         {/* แถบเลือกช่วงเวลา (การ์ดขาวซ้อนขอบส่วนหัว) */}
@@ -220,7 +224,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                 </span>
               }
             >
-              <p className="-mt-2 mb-3 text-xs text-stone-500">{t("stRecentHint")}</p>
+              <p className="-mt-2 mb-3 text-xs text-stone-500">{recentHint}</p>
               {stats.recent.length === 0 ? (
                 <p className="py-8 text-center text-sm text-stone-400">{t("stEmpty")}</p>
               ) : view === "table" ? (
@@ -239,9 +243,13 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                       {stats.recent.map((r) => (
                         <tr key={r.id} className="border-t border-stone-200 transition odd:bg-white even:bg-stone-50 hover:bg-brand-50">
                           <td className="whitespace-nowrap px-3 py-2.5 font-semibold tabular-nums">
-                            <a href={`/admin/chat?c=${r.id}`} className="text-brand-700 hover:underline">
-                              {r.ticketNo}
-                            </a>
+                            {chat ? (
+                              <a href={`/admin/chat?c=${r.id}`} className="text-brand-700 hover:underline">
+                                {r.ticketNo}
+                              </a>
+                            ) : (
+                              r.ticketNo
+                            )}
                             {r.urgent && (
                               <span className="ml-1.5 inline-flex items-center rounded-full bg-rose-50 px-1.5 text-[10px] font-bold text-rose-700 ring-1 ring-rose-100" title="urgent">
                                 !
@@ -280,7 +288,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                   {stats.recent.map((r) => (
                     <li key={r.id}>
                       <a
-                        href={`/admin/chat?c=${r.id}`}
+                        href={chat ? `/admin/chat?c=${r.id}` : undefined}
                         className={`group flex h-full flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lg hover:shadow-brand-600/10 ${
                           r.status === "resolved" ? "border-stone-200" : "border-brand-200 bg-gradient-to-br from-brand-50/60 to-white"
                         }`}
@@ -326,10 +334,12 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
                             <dd className="truncate font-medium tabular-nums text-stone-700">{r.resolvedAt ? fmtAt(r.resolvedAt) : "—"}</dd>
                           </div>
                         </dl>
-                        <span className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-brand-700 opacity-0 transition group-hover:opacity-100">
-                          {t("stOpenCase")}
-                          <Icon name="chevron" className="h-3.5 w-3.5 -rotate-90" />
-                        </span>
+                        {chat && (
+                          <span className="inline-flex w-fit items-center gap-1 text-xs font-semibold text-brand-700 opacity-0 transition group-hover:opacity-100">
+                            {t("stOpenCase")}
+                            <Icon name="chevron" className="h-3.5 w-3.5 -rotate-90" />
+                          </span>
+                        )}
                       </a>
                     </li>
                   ))}

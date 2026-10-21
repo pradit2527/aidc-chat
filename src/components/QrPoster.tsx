@@ -212,8 +212,8 @@ function Poster({ publicUrl, showTools }: { publicUrl: string; showTools: boolea
           <div className="h-1 bg-brand-500" />
 
           <div className="px-6 pb-6 pt-5 text-center">
-            <p className="text-sm font-semibold text-stone-800">ສະແກນດ້ວຍກ້ອງມືຖື ແລ້ວແຊັດກັບທີມໄອທີໄດ້ທັນທີ</p>
-            <p className="text-xs text-stone-500">Scan with your phone camera and chat with the IT team</p>
+            <p className="text-sm font-semibold text-stone-800">ສະແກນດ້ວຍກ້ອງມືຖື ແລ້ວແຈ້ງບັນຫາຫາທີມໄອທີໄດ້ທັນທີ</p>
+            <p className="text-xs text-stone-500">Scan with your phone camera and report a problem to the IT team</p>
 
             <div className="relative mx-auto mt-4 w-fit">
               {/* มุมสีส้มแดงเหมือนแผงสีบนอาคาร */}
@@ -234,7 +234,7 @@ function Poster({ publicUrl, showTools }: { publicUrl: string; showTools: boolea
               {[
                 ["1", "ສະແກນ QR", "Scan"],
                 ["2", "ກອກຊື່ ແລະ ເລືອກບັນຫາ", "Pick your problem"],
-                ["3", "ແຊັດກັບທີມໄອທີ", "Chat with IT"],
+                ["3", "ສົ່ງຫາທີມໄອທີ ແລ້ວຕິດຕາມສະຖານະ", "Send to IT & track status"],
               ].map(([n, lo, en]) => (
                 <li key={n} className="flex flex-col items-center gap-1">
                   <span className="grid h-6 w-6 place-items-center rounded-full bg-deep-700 text-xs font-bold text-white">{n}</span>

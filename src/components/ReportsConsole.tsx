@@ -15,18 +15,28 @@ import { ReportFiles } from "./ReportFiles";
 type Tab = ReportStatus | "all";
 type ListRes = { enabled: boolean; status: Tab; summary: { new: number; inProgress: number; done: number }; reports: ReportDTO[] };
 
-/** หน้ามอนิเตอร์งานแจ้งปัญหาของทีมไอที: รับงาน → ติ๊กข้อที่แก้แล้ว → ปิดงาน */
-export default function ReportsConsole({ user, initialLang, initialReportId = null }: { user: AdminUser; initialLang: Lang; initialReportId?: number | null }) {
+/** หน้ามอนิเตอร์งานแจ้งปัญหาของทีมไอที: รับงาน → ติ๊กข้อที่แก้แล้ว → ปิดงาน (chat=true จึงมีปุ่มไปคอนโซลแชทที่หัว) */
+export default function ReportsConsole({
+  user,
+  initialLang,
+  initialReportId = null,
+  chat = false,
+}: {
+  user: AdminUser;
+  initialLang: Lang;
+  initialReportId?: number | null;
+  chat?: boolean;
+}) {
   return (
     <I18nProvider initial={initialLang}>
-      <Console user={user} initialReportId={initialReportId} />
+      <Console user={user} initialReportId={initialReportId} chat={chat} />
     </I18nProvider>
   );
 }
 
 const TABS: Tab[] = ["new", "in_progress", "done", "all"];
 
-function Console({ user, initialReportId }: { user: AdminUser; initialReportId: number | null }) {
+function Console({ user, initialReportId, chat }: { user: AdminUser; initialReportId: number | null; chat: boolean }) {
   const { t, lang } = useI18n();
   // เปิดจากลิงก์ (?r=) → ใช้แท็บ "ทั้งหมด" เพื่อให้เจองานนั้นแน่นอน
   const [tab, setTab] = useState<Tab>(initialReportId ? "all" : "new");
@@ -75,9 +85,11 @@ function Console({ user, initialReportId }: { user: AdminUser; initialReportId: 
           user={user}
           barTitle={t("rcTitle")}
           extra={
-            <a href="/admin/chat" className="hidden h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 transition hover:bg-white/20 sm:grid">
-              {t("ahChat")}
-            </a>
+            chat ? (
+              <a href="/admin/chat" className="hidden h-9 place-items-center rounded-full bg-white/10 px-3 text-xs font-bold ring-1 ring-white/20 transition hover:bg-white/20 sm:grid">
+                {t("ahChat")}
+              </a>
+            ) : undefined
           }
         />
       </div>

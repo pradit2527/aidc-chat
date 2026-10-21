@@ -4,8 +4,9 @@ const URL = process.env.TEST_PG_URL;
 const maybe = URL ? describe : describe.skip;
 
 jest.mock("@/lib/db", () => {
+  // ไม่ตั้ง TEST_PG_URL → ไม่ต้องมีแพ็กเกจ pg (ชุดนี้ถูกข้ามทั้งชุดอยู่แล้ว)
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Pool } = require("pg");
+  const { Pool } = process.env.TEST_PG_URL ? require("pg") : { Pool: class {} };
   const pool = new Pool({ connectionString: process.env.TEST_PG_URL });
   return { dbEnabled: true, db: () => pool, q: async (text: string, params: unknown[] = []) => (await pool.query(text, params)).rows };
 });

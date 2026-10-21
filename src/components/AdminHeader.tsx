@@ -71,6 +71,9 @@ export function AdminHeader(props: Props) {
             <a href="/admin/stats" className={pill}>
               {t("admStats")}
             </a>
+            <a href="/admin/whatsapp" className={pill}>
+              WhatsApp
+            </a>
             <a href="/" target="_blank" rel="noreferrer" className={pill}>
               QR
             </a>

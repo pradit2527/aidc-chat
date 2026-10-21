@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import ReportsConsole from "@/components/ReportsConsole";
+import { chatEnabled } from "@/lib/features";
 import { DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
 
@@ -24,5 +25,5 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
     session = null;
   }
   if (!session) redirect("/admin");
-  return <ReportsConsole user={session.user} initialLang={isLang(saved) ? saved : DEFAULT_LANG} initialReportId={initialReportId} />;
+  return <ReportsConsole user={session.user} initialLang={isLang(saved) ? saved : DEFAULT_LANG} initialReportId={initialReportId} chat={chatEnabled()} />;
 }

@@ -18,17 +18,19 @@ type Props = {
   view?: "hub" | "chat";
   /** เปิดเคสนี้ทันทีเมื่อเข้าคอนโซลแชท (ลิงก์จากหน้าหลัก) */
   initialConversationId?: number | null;
+  /** ระบบแชทเปิดอยู่ (CHAT_ENABLED=1) — ค่าปกติซ่อน หน้าหลักจึงมีแค่แจ้งปัญหา */
+  chat?: boolean;
 };
 
-export default function AdminApp({ initialLang, user, configured, demo, view = "hub", initialConversationId = null }: Props) {
+export default function AdminApp({ initialLang, user, configured, demo, view = "hub", initialConversationId = null, chat = false }: Props) {
   return (
     <I18nProvider initial={initialLang}>
-      <Gate user={user} configured={configured} demo={demo} view={view} initialConversationId={initialConversationId} />
+      <Gate user={user} configured={configured} demo={demo} view={view} initialConversationId={initialConversationId} chat={chat} />
     </I18nProvider>
   );
 }
 
-function Gate({ user: initial, configured, demo, view, initialConversationId }: Omit<Props, "initialLang">) {
+function Gate({ user: initial, configured, demo, view, initialConversationId, chat }: Omit<Props, "initialLang">) {
   const { t } = useI18n();
   const [user, setUser] = useState<AdminUser | null>(initial);
 
@@ -42,7 +44,7 @@ function Gate({ user: initial, configured, demo, view, initialConversationId }: 
     );
   }
   if (!user) return <Login onDone={setUser} />;
-  if (view === "hub" && !demo) return <AdminHub user={user} onSignedOut={() => setUser(null)} />;
+  if (view === "hub" && !demo) return <AdminHub user={user} onSignedOut={() => setUser(null)} chat={chat} />;
   return <AdminConsole user={user} onSignedOut={() => setUser(null)} demo={demo} initialConversationId={initialConversationId ?? null} />;
 }
 

@@ -53,7 +53,9 @@ describe("หน้าเว็บสาธารณะ", () => {
     }
     const login = await c.get("/login");
     expect(login.status).toBe(200);
-    expect(login.text).toContain('href="/register"');
+    // ไม่มีปุ่มลงทะเบียนเองแล้ว (บัญชีสร้างโดยทีมไอทีที่ /admin/users) — หน้าบอกให้ติดต่อไอทีแทน
+    expect(login.text).not.toContain('href="/register"');
+    expect(login.text).toContain("ຕິດຕໍ່ທີມໄອທີ");
     expect(login.text).toMatch(/type="password"/);
   });
 
@@ -120,6 +122,7 @@ describe("หน้าเว็บสาธารณะ", () => {
   test.each([
     ["/qr", "/"],
     ["/admin/stats", "/admin"],
+    ["/admin/whatsapp", "/admin"],
   ])("%s เด้งไป %s", async (from, to) => {
     const r = await c.get(from);
     expect([301, 302, 307, 308]).toContain(r.status);

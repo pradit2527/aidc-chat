@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import AdminApp from "@/components/AdminApp";
 import type { AdminUser } from "@/lib/adminTypes";
+import { chatEnabled } from "@/lib/features";
 import { DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
 
@@ -21,7 +22,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
   // โหมดตัวอย่าง (ข้อมูลปลอม ไม่เรียก Chatwoot) เปิดได้เฉพาะตอนพัฒนา
   if (demo === "1" && process.env.NODE_ENV !== "production") {
-    return <AdminApp initialLang={initialLang} user={DEMO_USER} configured demo view="chat" />;
+    return <AdminApp initialLang={initialLang} user={DEMO_USER} configured demo view="chat" chat />;
   }
 
   const configured = Boolean(process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 16);
@@ -33,5 +34,5 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       user = null;
     }
   }
-  return <AdminApp initialLang={initialLang} user={user} configured={configured} view="hub" />;
+  return <AdminApp initialLang={initialLang} user={user} configured={configured} view="hub" chat={chatEnabled()} />;
 }

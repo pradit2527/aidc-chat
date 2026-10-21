@@ -113,3 +113,9 @@ CREATE TABLE IF NOT EXISTS app_users (
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'staff';
 -- หัวหน้าโรงแรม (role manager) มีได้บัญชีเดียว — ดู /manager
 CREATE UNIQUE INDEX IF NOT EXISTS app_users_one_manager ON app_users ((1)) WHERE role = 'manager';
+-- ค่าตั้งของระบบที่แก้จากหน้าแอดมิน (เช่น 'whatsapp_recipients' = เบอร์ที่รับแจ้งเตือน WhatsApp) — key เดียว = แถวเดียว
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

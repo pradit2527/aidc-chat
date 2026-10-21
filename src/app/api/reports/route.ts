@@ -1,13 +1,15 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { rateLimit, sameOrigin } from "@/lib/adminApi";
 import { dbEnabled } from "@/lib/db";
 import { createReport, parseReportInput } from "@/lib/reports";
+import { notifyNewReport, publicBaseUrl } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
 /**
  * พนักงานส่งรายงานปัญหาแบบรายการ (ไม่ผ่านแชท) → ได้เลขตั๋วชุดเดียวกับเคสแชท
- * ต้องมีฐานข้อมูล (DATABASE_URL) — ไม่มี → 503 ให้หน้าเว็บแนะนำให้ใช้แชทแทน
+ * ต้องมีฐานข้อมูล (DATABASE_URL) — ไม่มี → 503 ให้หน้าเว็บบอกให้ติดต่อไอทีโดยตรง
+ * สร้างสำเร็จแล้วแจ้งเตือน WhatsApp ทีมไอทีเบื้องหลัง (after — ไม่ถ่วงคำตอบ; ไม่ได้ตั้งค่า/ไม่มีผู้รับ → ข้าม)
  */
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -19,6 +21,8 @@ export async function POST(req: Request) {
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
   try {
     const r = await createReport(parsed.value);
+    const base = publicBaseUrl(req);
+    after(() => notifyNewReport(r.id, base).catch((e: unknown) => console.error(`[whatsapp] notify ${r.ticketNo}: ${e instanceof Error ? e.message : String(e)}`)));
     return NextResponse.json(r, { status: 201 });
   } catch (e) {
     console.error(`[reports] create: ${e instanceof Error ? e.message : String(e)}`);

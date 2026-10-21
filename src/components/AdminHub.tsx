@@ -12,33 +12,45 @@ import { useI18n } from "./I18n";
 import { Icon } from "./Icon";
 
 type ReportsRes = { enabled: boolean; summary: { new: number; inProgress: number; done: number }; reports: ReportDTO[] };
+type WaRes = {
+  db: boolean;
+  device: { enabled: boolean; status: string; group: string | null };
+  twilio: { configured: boolean; recipients: number };
+};
 const MAX_ROWS = 10;
 
 /**
- * หน้าหลักของทีมไอที (หลังล็อกอิน): เลือก "ระบบแชท" หรือ "แจ้งปัญหา" + สรุปรายการที่ยังค้าง
- * กดรายการใดก็กระโดดเข้าหน้านั้นพร้อมเปิดเคส/งานนั้นทันที (/admin/chat?c=<id>, /admin/reports?r=<id>)
+ * หน้าหลักของทีมไอที (หลังล็อกอิน): การ์ด "ระบบแชท" (เฉพาะเมื่อ chat=true — ค่าปกติซ่อน ผู้ใช้สั่ง), "แจ้งปัญหา", "บัญชีผู้ใช้"
+ * + แถบสถานะแจ้งเตือน WhatsApp + สรุปรายการที่ยังค้าง — กดรายการใดก็กระโดดเข้าหน้านั้นพร้อมเปิดเคส/งานนั้นทันที (?c= / ?r=)
+ * แอดมินในระบบเองที่ไม่มี CHATWOOT_AGENT_TOKEN (user.local && !user.chat) ใช้แชทไม่ได้ — การ์ดแชทแสดงจาง
  */
-export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSignedOut: () => void }) {
+export default function AdminHub({ user, onSignedOut, chat = false }: { user: AdminUser; onSignedOut: () => void; chat?: boolean }) {
   const { t, lang } = useI18n();
   const [chats, setChats] = useState<ConversationDTO[] | null>(null);
   const [reports, setReports] = useState<ReportsRes | null>(null);
+  const [wa, setWa] = useState<WaRes | null>(null);
   const [error, setError] = useState(false);
+
+  const noChat = user.local && !user.chat;
+  const showChat = chat && !noChat;
 
   const load = useCallback(async () => {
     try {
-      const [c, rNew, rProg] = await Promise.all([
-        user.local && !user.chat ? Promise.resolve({ conversations: [] as ConversationDTO[] }) : api<{ conversations: ConversationDTO[] }>("/api/admin/conversations?status=open"),
+      const [c, rNew, rProg, w] = await Promise.all([
+        showChat ? api<{ conversations: ConversationDTO[] }>("/api/admin/conversations?status=open") : Promise.resolve({ conversations: [] as ConversationDTO[] }),
         api<ReportsRes>("/api/admin/reports?status=new"),
         api<ReportsRes>("/api/admin/reports?status=in_progress"),
+        api<WaRes>("/api/admin/whatsapp?summary=1").catch(() => null),
       ]);
       // แชทที่ลูกค้ารอตอบขึ้นก่อน แล้วเรียงตามกิจกรรมล่าสุด
       setChats([...c.conversations].sort((a, b) => Number(b.unread > 0) - Number(a.unread > 0) || b.updatedAt - a.updatedAt));
       setReports({ ...rNew, reports: [...rNew.reports, ...rProg.reports] });
+      setWa(w);
       setError(false);
     } catch {
       setError(true);
     }
-  }, [user.local, user.chat]);
+  }, [showChat]);
 
   useLive(load, 5_000);
 
@@ -47,26 +59,42 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
   const pendingReports = reports?.enabled ? reports.summary.new + reports.summary.inProgress : 0;
   const dept = (id: string) => DEPARTMENTS.find((d) => d.id === id)?.label[lang] ?? id;
 
+  // แถบสถานะแจ้งเตือน WhatsApp: กลุ่ม (อุปกรณ์ที่เชื่อมต่อ) มาก่อน ไม่ได้เปิดจึงดู Twilio; ไม่มีช่องทางใด → ไม่แสดง
+  const waAlert = (() => {
+    if (!wa || !wa.db) return null;
+    if (wa.device.enabled) {
+      return wa.device.status === "open" && wa.device.group
+        ? { ok: true, text: t("waHubGroupReady", { group: wa.device.group }) }
+        : { ok: false, text: t("waHubAlertGroup") };
+    }
+    if (wa.twilio.configured) {
+      return wa.twilio.recipients === 0 ? { ok: false, text: t("waHubAlert") } : { ok: true, text: t("waHubReady", { n: wa.twilio.recipients }) };
+    }
+    return null;
+  })();
+
   return (
     <div className="min-h-screen">
-      <AdminHeader user={user} title={t("ahTitle")} subtitle={t("ahSub", { name: user.name })} hideHome onSignedOut={onSignedOut} />
+      <AdminHeader user={user} title={t("ahTitle")} subtitle={t(chat ? "ahSub" : "ahSubReport", { name: user.name })} hideHome onSignedOut={onSignedOut} />
 
       <main className="relative z-10 mx-auto -mt-8 grid max-w-6xl gap-4 px-4 pb-10">
         {/* เมนูหลัก */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Choice
-            href="/admin/chat"
-            n={1}
-            icon="chat"
-            title={t("ahChat")}
-            hint={user.local && !user.chat ? t("ahChatNeedsCw") : t("ahChatHint")}
-            badge={waiting}
-            badgeLabel={t("ahWaiting")}
-            cta={t("hubGo")}
-            disabled={user.local && !user.chat}
-          />
-          <Choice href="/admin/reports" n={2} icon="clipboard" title={t("ahReports")} hint={t("ahReportsHint")} badge={newReports} badgeLabel={t("rcTabNew")} cta={t("hubGo")} />
-          <Choice href="/admin/users" n={3} icon="user" title={t("admUsers")} hint={t("ahUsersHint")} cta={t("hubGo")} />
+        <div className={`grid gap-4 ${chat ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {chat && (
+            <Choice
+              href="/admin/chat"
+              n={1}
+              icon="chat"
+              title={t("ahChat")}
+              hint={noChat ? t("ahChatNeedsCw") : t("ahChatHint")}
+              badge={waiting}
+              badgeLabel={t("ahWaiting")}
+              cta={t("hubGo")}
+              disabled={noChat}
+            />
+          )}
+          <Choice href="/admin/reports" n={chat ? 2 : 1} icon="clipboard" title={t("ahReports")} hint={t("ahReportsHint")} badge={newReports} badgeLabel={t("rcTabNew")} cta={t("hubGo")} />
+          <Choice href="/admin/users" n={chat ? 3 : 2} icon="user" title={t("admUsers")} hint={t("ahUsersHint")} cta={t("hubGo")} />
         </div>
 
         {error && (
@@ -75,51 +103,63 @@ export default function AdminHub({ user, onSignedOut }: { user: AdminUser; onSig
           </p>
         )}
 
+        {/* แจ้งเตือน WhatsApp: ยังไม่พร้อม (ยังไม่สแกน/ยังไม่เลือกกลุ่ม) → เตือนสีเหลือง; พร้อม → สีเขียวบอกกลุ่ม */}
+        {waAlert && (
+          <Link
+            href="/admin/whatsapp"
+            className={`flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium ring-1 transition ${
+              waAlert.ok ? "bg-emerald-50 text-emerald-800 ring-emerald-100 hover:bg-emerald-100" : "bg-amber-50 text-amber-900 ring-amber-200 hover:bg-amber-100"
+            }`}
+          >
+            <Icon name="bell" className="h-4 w-4 shrink-0" />
+            {waAlert.text}
+            <Icon name="chevron" className="ml-auto h-4 w-4 -rotate-90" />
+          </Link>
+        )}
+
         {/* สรุปรายการค้าง */}
-        <div className="grid gap-4 lg:grid-cols-2">
-          {!(user.local && !user.chat) && (
-          <section className="card p-4">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 text-sm font-semibold">
-                <Icon name="chat" className="h-4 w-4 text-deep-700" />
-                {t("ahOpenChats")}
-                {chats && <span className="text-xs font-normal text-stone-500">({chats.length})</span>}
-              </h2>
-              <Link href="/admin/chat" className="text-xs font-semibold text-brand-700 hover:underline">
-                {t("ahViewAll")}
-              </Link>
-            </div>
-            {!chats ? (
-              <div className="mt-3 h-10 animate-pulse rounded-xl bg-stone-100" />
-            ) : chats.length === 0 ? (
-              <p className="mt-3 text-sm text-stone-400">{t("ahEmptyChats")}</p>
-            ) : (
-              <ul className="mt-2 divide-y divide-stone-100">
-                {chats.slice(0, MAX_ROWS).map((c) => (
-                  <li key={c.id}>
-                    <Link href={`/admin/chat?c=${c.id}`} className="flex items-center gap-3 py-2.5 hover:bg-stone-50">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-deep-700 text-sm font-bold text-white">{initialOf(c.name)}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className={`truncate text-sm ${c.unread ? "font-bold" : "font-semibold"}`}>{c.name}</span>
-                          {c.ticket && <span className="shrink-0 text-[11px] tabular-nums text-brand-700">{c.ticket}</span>}
+        <div className={`grid gap-4 ${showChat ? "lg:grid-cols-2" : ""}`}>
+          {showChat && (
+            <section className="card p-4">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-sm font-semibold">
+                  <Icon name="chat" className="h-4 w-4 text-deep-700" />
+                  {t("ahOpenChats")}
+                  {chats && <span className="text-xs font-normal text-stone-500">({chats.length})</span>}
+                </h2>
+                <Link href="/admin/chat" className="text-xs font-semibold text-brand-700 hover:underline">
+                  {t("ahViewAll")}
+                </Link>
+              </div>
+              {!chats ? (
+                <div className="mt-3 h-10 animate-pulse rounded-xl bg-stone-100" />
+              ) : chats.length === 0 ? (
+                <p className="mt-3 text-sm text-stone-400">{t("ahEmptyChats")}</p>
+              ) : (
+                <ul className="mt-2 divide-y divide-stone-100">
+                  {chats.slice(0, MAX_ROWS).map((c) => (
+                    <li key={c.id}>
+                      <Link href={`/admin/chat?c=${c.id}`} className="flex items-center gap-3 py-2.5 hover:bg-stone-50">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-deep-700 text-sm font-bold text-white">{initialOf(c.name)}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className={`truncate text-sm ${c.unread ? "font-bold" : "font-semibold"}`}>{c.name}</span>
+                            {c.ticket && <span className="shrink-0 text-[11px] tabular-nums text-brand-700">{c.ticket}</span>}
+                          </span>
+                          <span className="block truncate text-xs text-stone-500">{[c.subtitle, c.preview].filter(Boolean).join(" · ")}</span>
                         </span>
-                        <span className="block truncate text-xs text-stone-500">
-                          {[c.subtitle, c.preview].filter(Boolean).join(" · ")}
+                        <span className="flex shrink-0 flex-col items-end gap-1">
+                          <span className="text-[11px] tabular-nums text-stone-500">{fmtTime(c.updatedAt)}</span>
+                          {c.unread > 0 && (
+                            <span className="unread-badge inline-grid h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white">{c.unread}</span>
+                          )}
                         </span>
-                      </span>
-                      <span className="flex shrink-0 flex-col items-end gap-1">
-                        <span className="text-[11px] tabular-nums text-stone-500">{fmtTime(c.updatedAt)}</span>
-                        {c.unread > 0 && (
-                          <span className="unread-badge inline-grid h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1.5 text-[11px] font-bold text-white">{c.unread}</span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           )}
 
           <section className="card p-4">
