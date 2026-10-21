@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import { api } from "@/lib/adminClient";
 import { useLive } from "@/lib/useLive";
@@ -16,7 +17,7 @@ export function ReportsLink({ label }: { label: string }) {
   );
   useLive(load, 10_000);
   return (
-    <a
+    <Link
       href="/admin/reports"
       title={label}
       className="relative hidden h-9 place-items-center rounded-full bg-white/10 px-2.5 text-xs font-bold ring-1 ring-white/20 transition hover:bg-white/20 sm:grid"
@@ -27,6 +28,6 @@ export function ReportsLink({ label }: { label: string }) {
           {count}
         </span>
       )}
-    </a>
+    </Link>
   );
 }

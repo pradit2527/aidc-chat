@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import ReportsConsole from "@/components/ReportsConsole";
+import { requireAdmin } from "@/lib/adminGuard";
 import { chatEnabled } from "@/lib/features";
 import { DEFAULT_LANG, isLang, LANG_COOKIE } from "@/lib/i18n";
-import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +17,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
   const [{ r }, jar] = await Promise.all([searchParams, cookies()]);
   const saved = jar.get(LANG_COOKIE)?.value;
   const initialReportId = /^\d{1,12}$/.test(r ?? "") ? Number(r) : null;
-  let session = null;
-  try {
-    session = await getSession();
-  } catch {
-    session = null;
-  }
-  if (!session) redirect("/admin");
+  // ยังไม่ล็อกอิน → หน้าล็อกอินแล้วเด้งกลับมาที่งานเดิม (ลิงก์จากหน้าหลัก/แจ้งเตือน)
+  const session = await requireAdmin(initialReportId ? `/admin/reports?r=${initialReportId}` : "/admin/reports");
   return <ReportsConsole user={session.user} initialLang={isLang(saved) ? saved : DEFAULT_LANG} initialReportId={initialReportId} chat={chatEnabled()} />;
 }

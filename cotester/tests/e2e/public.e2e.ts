@@ -122,7 +122,7 @@ describe("หน้าเว็บสาธารณะ", () => {
   test.each([
     ["/qr", "/"],
     ["/admin/stats", "/admin"],
-    ["/admin/whatsapp", "/admin"],
+    ["/admin/whatsapp", "/admin?next=%2Fadmin%2Fwhatsapp"], // จำปลายทางไว้ให้เด้งกลับหลังล็อกอิน
   ])("%s เด้งไป %s", async (from, to) => {
     const r = await c.get(from);
     expect([301, 302, 307, 308]).toContain(r.status);

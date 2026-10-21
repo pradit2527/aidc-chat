@@ -122,11 +122,11 @@ describe("พนักงานดูสถานะ (GET /api/reports/:no?who=)
 });
 
 describe("คอนโซลไอที (/admin/reports)", () => {
-  test("ยังไม่ล็อกอิน → API 401 และหน้าเด้งไป /admin", async () => {
+  test("ยังไม่ล็อกอิน → API 401 และหน้าเด้งไปล็อกอิน /admin?next=/admin/reports (จำปลายทางไว้)", async () => {
     expect((await admin.get("/api/admin/reports")).status).toBe(401);
     const r = await admin.get("/admin/reports");
     expect([301, 302, 307, 308]).toContain(r.status);
-    expect(["/admin", `${BASE}/admin`]).toContain(r.redirect);
+    expect(r.redirect).toContain("/admin?next=%2Fadmin%2Freports");
   });
 
   test("ล็อกอินแล้วเห็นงานใหม่ 2 รายการ (ด่วนก่อน) + summary; หน้า /admin/reports เปิดได้", async () => {
@@ -137,6 +137,29 @@ describe("คอนโซลไอที (/admin/reports)", () => {
     expect(r.reports.map((x) => x.ticketNo)).toEqual([ticketNo, `${ticketNo.slice(0, -3)}002`]); // ด่วนก่อน
     expect((await admin.get("/admin/reports")).status).toBe(200);
     expect((await admin.get("/api/admin/reports?summary=1")).json).toEqual({ enabled: true, summary: { new: 2, inProgress: 0, done: 0 } });
+  });
+
+  test("ลิงก์เลขตั๋ว /admin/reports/<เลขตั๋ว> (ในแจ้งเตือน WhatsApp): ยังไม่ล็อกอิน → /admin?next=… ; ล็อกอินแล้วเปิดตั๋วได้ทันที; ไม่พบ → หน้ารายการ; รูปแบบผิด → 404", async () => {
+    const path = `/admin/reports/${ticketNo}`;
+    const anon = new Client();
+    const r = await anon.get(path);
+    expect([307, 308]).toContain(r.status);
+    expect(r.redirect).toContain(`/admin?next=${encodeURIComponent(path)}`);
+    // ล็อกอินค้างอยู่แล้วเปิด /admin?next=… → เด้งไปตั๋วทันที (ไม่ต้องกรอกซ้ำ)
+    const back = await admin.get(`/admin?next=${encodeURIComponent(path)}`);
+    expect([307, 308]).toContain(back.status);
+    expect(back.redirect?.endsWith(path)).toBe(true);
+    const page = await admin.get(path);
+    expect(page.status).toBe(200);
+    expect(page.text).toContain("IT Helpdesk");
+    const missing = await admin.get("/admin/reports/Ticket01-01-2000-999");
+    expect([307, 308]).toContain(missing.status);
+    expect(missing.redirect?.endsWith("/admin/reports")).toBe(true);
+    expect((await admin.get("/admin/reports/nope")).status).toBe(404);
+    // next ที่ไม่ใช่ path ใต้ /admin/ ถูกเพิกเฉย → หน้าหลักตามปกติ ไม่เด้งออกนอกระบบ
+    for (const bad of ["https://evil.example", "//evil.example", "/start", "/admin"]) {
+      expect((await admin.get(`/admin?next=${encodeURIComponent(bad)}`)).status).toBe(200);
+    }
   });
 
   test("รับงาน → in_progress + ผู้รับผิดชอบ = ผู้กด; พนักงานเห็นสถานะเปลี่ยน", async () => {

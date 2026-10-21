@@ -209,9 +209,19 @@ export async function getReport(id: number): Promise<ReportDTO | null> {
   return rows[0] ? toDTO(rows[0]) : null;
 }
 
+/** รูปแบบเลขตั๋ว เช่น Ticket21-10-2026-009 */
+export const isTicketNo = (v: unknown): v is string => typeof v === "string" && /^Ticket\d{2}-\d{2}-\d{4}-\d{3,}$/.test(v);
+
+/** id ของรายงานจากเลขตั๋ว (ลิงก์ในแจ้งเตือน WhatsApp ใช้เลขตั๋ว) — ไม่พบ → null */
+export async function findReportIdByTicket(ticketNo: string): Promise<number | null> {
+  if (!isTicketNo(ticketNo)) return null;
+  const [row] = await q<{ id: string }>("SELECT id::text AS id FROM reports WHERE ticket_no = $1", [ticketNo]);
+  return row ? Number(row.id) : null;
+}
+
 /** เจ้าของดูรายงานของตัวเอง: ต้องรู้ทั้งเลขตั๋วและ identifier ของเครื่องที่ส่ง */
 export async function getReportForOwner(ticketNo: string, identifier: string): Promise<ReportDTO | null> {
-  if (!/^Ticket\d{2}-\d{2}-\d{4}-\d{3,}$/.test(ticketNo) || !/^cosi_[0-9a-f]{24}$/.test(identifier)) return null;
+  if (!isTicketNo(ticketNo) || !/^cosi_[0-9a-f]{24}$/.test(identifier)) return null;
   const rows = await q<Row>(`${SELECT} WHERE r.ticket_no = $1 AND r.identifier = $2`, [ticketNo, identifier]);
   return rows[0] ? toDTO(rows[0]) : null;
 }

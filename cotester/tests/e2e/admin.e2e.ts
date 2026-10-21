@@ -333,7 +333,7 @@ describe("8b. แจ้งเตือนเข้ากลุ่ม WhatsApp (/
     expect((await anon.get("/api/admin/whatsapp")).status).toBe(401);
     const r = await anon.get("/admin/whatsapp");
     expect([307, 308]).toContain(r.status);
-    expect(r.redirect).toMatch(/\/admin$/);
+    expect(r.redirect).toContain("/admin?next=%2Fadmin%2Fwhatsapp"); // จำปลายทางไว้ให้เด้งกลับหลังล็อกอิน
   });
 });
 

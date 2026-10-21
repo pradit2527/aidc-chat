@@ -83,7 +83,8 @@ export async function notifyNewReport(reportId: number, baseUrl: string): Promis
   if (!group) return null;
   const r = await getReport(reportId);
   if (!r) return null;
-  const link = `${baseUrl.replace(/\/+$/, "")}/admin/reports?r=${r.id}`;
+  // ลิงก์ใช้เลขตั๋ว (ผู้ใช้สั่ง) — กดแล้วถ้ายังไม่ล็อกอินจะไปหน้าล็อกอินแล้วเด้งกลับมาเปิดตั๋วนี้
+  const link = `${baseUrl.replace(/\/+$/, "")}/admin/reports/${encodeURIComponent(r.ticketNo)}`;
   const result = await sendToGroup(group, formatReportNotice(r, link));
   if (!result.ok) console.warn(`[whatsapp] ${r.ticketNo} → ${result.to}: ${result.status} ${result.message}`);
   await q("INSERT INTO report_events (report_id, type, actor, detail) VALUES ($1, 'notified', 'system', $2::jsonb)", [

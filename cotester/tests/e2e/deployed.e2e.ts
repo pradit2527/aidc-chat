@@ -45,10 +45,10 @@ d(`ระบบที่ติดตั้งแล้ว: ${URL ?? "(ไม่�
     expect((await c.get("/api/admin/me")).status).toBe(401);
     expect((await c.get("/api/admin/stats")).status).toBe(401);
     expect((await c.get("/api/admin/whatsapp")).status).toBe(401);
-    for (const p of ["/admin/stats", "/admin/whatsapp"]) {
+    for (const p of ["/admin/stats", "/admin/whatsapp", "/admin/reports/Ticket01-01-2000-001"]) {
       const r = await c.get(p);
       expect([301, 302, 307, 308]).toContain(r.status);
-      expect(["/admin", `${URL}/admin`]).toContain(r.redirect);
+      expect(r.redirect).toMatch(/\/admin(\?next=[A-Za-z0-9%._-]*)?$/); // บางหน้าจำปลายทางไว้ใน ?next=
     }
   });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { AdminUser } from "@/lib/adminTypes";
 import { api, ApiError } from "@/lib/adminClient";
@@ -20,17 +21,19 @@ type Props = {
   initialConversationId?: number | null;
   /** ระบบแชทเปิดอยู่ (CHAT_ENABLED=1) — ค่าปกติซ่อน หน้าหลักจึงมีแค่แจ้งปัญหา */
   chat?: boolean;
+  /** ปลายทางหลังล็อกอิน (path ใต้ /admin/ ที่ตรวจแล้ว) — เช่น ลิงก์ตั๋วจากแจ้งเตือน WhatsApp */
+  next?: string | null;
 };
 
-export default function AdminApp({ initialLang, user, configured, demo, view = "hub", initialConversationId = null, chat = false }: Props) {
+export default function AdminApp({ initialLang, user, configured, demo, view = "hub", initialConversationId = null, chat = false, next = null }: Props) {
   return (
     <I18nProvider initial={initialLang}>
-      <Gate user={user} configured={configured} demo={demo} view={view} initialConversationId={initialConversationId} chat={chat} />
+      <Gate user={user} configured={configured} demo={demo} view={view} initialConversationId={initialConversationId} chat={chat} next={next} />
     </I18nProvider>
   );
 }
 
-function Gate({ user: initial, configured, demo, view, initialConversationId, chat }: Omit<Props, "initialLang">) {
+function Gate({ user: initial, configured, demo, view, initialConversationId, chat, next }: Omit<Props, "initialLang">) {
   const { t } = useI18n();
   const [user, setUser] = useState<AdminUser | null>(initial);
 
@@ -43,13 +46,14 @@ function Gate({ user: initial, configured, demo, view, initialConversationId, ch
       </div>
     );
   }
-  if (!user) return <Login onDone={setUser} />;
+  if (!user) return <Login onDone={setUser} next={next ?? null} />;
   if (view === "hub" && !demo) return <AdminHub user={user} onSignedOut={() => setUser(null)} chat={chat} />;
   return <AdminConsole user={user} onSignedOut={() => setUser(null)} demo={demo} initialConversationId={initialConversationId ?? null} />;
 }
 
-function Login({ onDone }: { onDone: (u: AdminUser) => void }) {
+function Login({ onDone, next }: { onDone: (u: AdminUser) => void; next: string | null }) {
   const { t, lang, setLang } = useI18n();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<MsgKey | null>(null);
@@ -62,6 +66,12 @@ function Login({ onDone }: { onDone: (u: AdminUser) => void }) {
     setError(null);
     try {
       const r = await api<{ user: AdminUser }>("/api/admin/login", { json: { email, password } });
+      if (next) {
+        // มาจากลิงก์ที่ต้องล็อกอินก่อน (เช่น ตั๋วในแจ้งเตือน WhatsApp) → ไปหน้านั้นเลย
+        router.replace(next);
+        router.refresh();
+        return;
+      }
       onDone(r.user);
     } catch (err) {
       const s = err instanceof ApiError ? err.status : 0;

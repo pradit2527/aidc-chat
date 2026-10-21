@@ -14,20 +14,23 @@ export type NoticeReport = Pick<ReportDTO, "ticketNo" | "name" | "department" | 
  */
 export function formatReportNotice(r: NoticeReport, link: string): string {
   const dept = DEPARTMENTS.find((d) => d.id === r.department)?.label.lo ?? r.department;
-  // เลขตั๋วบรรทัดแรก (ผู้ใช้สั่ง — เห็นทันทีในแจ้งเตือนมือถือ) ตามด้วย "คุณ xxx ได้แจ้งปัญหาในระบบ Ticket แล้ว" และรายละเอียด
+  const byTopic = new Map<string, string[]>();
+  for (const i of r.items) byTopic.set(i.topic, [...(byTopic.get(i.topic) ?? []), i.text]);
+  const topicLabel = (topic: string) => CATEGORIES.find((c) => c.id === topic)?.label.lo ?? topic;
+
+  // เลขตั๋วบรรทัดแรก (เห็นทันทีในแจ้งเตือนมือถือ) → "คุณ xxx ได้แจ้งปัญหาในระบบ Ticket แล้ว" → หัวข้อที่แจ้ง (ผู้ใช้สั่ง) → เวลา
   const head = [
     `🎫 *${r.ticketNo}*${r.urgent ? " · 🔴 *ດ່ວນ*" : ""}`,
     `🆕 ທ່ານ *${r.name}*${dept ? ` (${dept})` : ""} ໄດ້ແຈ້ງບັນຫາໃນລະບົບ Ticket ແລ້ວ`,
+    ...(byTopic.size ? [`📌 ຫົວຂໍ້: ${[...byTopic.keys()].map(topicLabel).join(", ")}`] : []),
     `🕒 ${ticketDate(r.createdAt)} ${laoTime(r.createdAt)}${r.contact ? ` · ☎ ${r.contact}` : ""}`,
     "",
   ];
 
-  const byTopic = new Map<string, string[]>();
-  for (const i of r.items) byTopic.set(i.topic, [...(byTopic.get(i.topic) ?? []), i.text]);
   const body: string[] = [];
   let n = 0;
   for (const [topic, texts] of byTopic) {
-    body.push(`📌 ${CATEGORIES.find((c) => c.id === topic)?.label.lo ?? topic}`);
+    body.push(`▪️ ${topicLabel(topic)}`);
     for (const text of texts) body.push(`  ${++n}. ${text}`);
   }
 
