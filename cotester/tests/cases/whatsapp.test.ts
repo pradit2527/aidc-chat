@@ -99,12 +99,11 @@ describe("formatReportNotice / formatTestNotice", () => {
       { id: 2, name: "b.mp4", mime: "video/mp4", size: 1000, kind: "video" },
     ],
   };
-  test("มีเลขตั๋ว ด่วน ผู้แจ้ง/แผนก(ลาว)/เบอร์ เวลาลาว ข้อจัดกลุ่มตามหัวข้อเรียงเลขต่อเนื่อง จำนวนไฟล์ และลิงก์", () => {
+  test("ขึ้นต้น 'ท่าน <ชื่อ> (แผนก) ได้แจ้งปัญหาในระบบ Ticket แล้ว' + เลขตั๋ว ด่วน เวลาลาว เบอร์ ข้อจัดกลุ่มตามหัวข้อเรียงเลขต่อเนื่อง จำนวนไฟล์ ลิงก์", () => {
     const text = formatReportNotice(report, "http://10.0.100.54:3400/admin/reports?r=12");
-    expect(text).toContain("*ມີການແຈ້ງບັນຫາໃໝ່* · Ticket19-10-2026-003");
-    expect(text).toContain("🔴 *ດ່ວນ*");
-    expect(text).toContain("👤 ສົມຊາຍ ວົງສາ · ຕ້ອນຮັບ · ☎ 205");
-    expect(text).toContain("🕒 20-10-2026 12:00");
+    expect(text.startsWith("🆕 ທ່ານ *ສົມຊາຍ ວົງສາ* (ຕ້ອນຮັບ) ໄດ້ແຈ້ງບັນຫາໃນລະບົບ Ticket ແລ້ວ\n")).toBe(true);
+    expect(text).toContain("🎫 ເລກທີ *Ticket19-10-2026-003* · 🔴 *ດ່ວນ*");
+    expect(text).toContain("🕒 20-10-2026 12:00 · ☎ 205");
     expect(text).toMatch(/📌 Wi-Fi \/ ອິນເຕີເນັດ\n {2}1\. Wi-Fi ຫ້ອງ 203 ຕໍ່ບໍ່ໄດ້\n {2}2\. ຊ້າຫຼາຍ\n📌 ຄອມພິວເຕີ \/ ເຄື່ອງພິມ\n {2}3\. ເຄື່ອງພິມບໍ່ອອກ/);
     expect(text).toContain("📎 ໄຟລ໌ແນບ 2 ໄຟລ໌");
     expect(text.endsWith("🔗 http://10.0.100.54:3400/admin/reports?r=12")).toBe(true);
@@ -114,7 +113,7 @@ describe("formatReportNotice / formatTestNotice", () => {
     expect(text).not.toContain("ດ່ວນ");
     expect(text).not.toContain("☎");
     expect(text).not.toContain("📎");
-    expect(text).toContain("👤 ສົມຊາຍ ວົງສາ · zzz");
+    expect(text).toContain("ທ່ານ *ສົມຊາຍ ວົງສາ* (zzz) ໄດ້ແຈ້ງບັນຫາ");
   });
   test("ข้อเยอะมาก → ตัดข้อท้าย ๆ ใส่ … แต่คงลิงก์ และยาวไม่เกินขีดจำกัด", () => {
     const items = Array.from({ length: 50 }, (_, i) => ({ id: i, topic: "other", text: `ບັນຫາທີ່ ${i + 1} ` + "ລາຍລະອຽດ".repeat(8), done: false, doneAt: null, doneBy: "" }));
