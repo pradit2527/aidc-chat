@@ -12,11 +12,7 @@ import { useI18n } from "./I18n";
 import { Icon } from "./Icon";
 
 type ReportsRes = { enabled: boolean; summary: { new: number; inProgress: number; done: number }; reports: ReportDTO[] };
-type WaRes = {
-  db: boolean;
-  device: { enabled: boolean; status: string; group: string | null };
-  twilio: { configured: boolean; recipients: number };
-};
+type WaRes = { db: boolean; device: { enabled: boolean; status: string; group: string | null } };
 const MAX_ROWS = 10;
 
 /**
@@ -59,19 +55,13 @@ export default function AdminHub({ user, onSignedOut, chat = false }: { user: Ad
   const pendingReports = reports?.enabled ? reports.summary.new + reports.summary.inProgress : 0;
   const dept = (id: string) => DEPARTMENTS.find((d) => d.id === id)?.label[lang] ?? id;
 
-  // แถบสถานะแจ้งเตือน WhatsApp: กลุ่ม (อุปกรณ์ที่เชื่อมต่อ) มาก่อน ไม่ได้เปิดจึงดู Twilio; ไม่มีช่องทางใด → ไม่แสดง
-  const waAlert = (() => {
-    if (!wa || !wa.db) return null;
-    if (wa.device.enabled) {
-      return wa.device.status === "open" && wa.device.group
+  // แถบสถานะแจ้งเตือนกลุ่ม WhatsApp (เฉพาะเครื่องที่เปิด WHATSAPP_DEVICE): เชื่อมต่อ + มีกลุ่ม → เขียว, ไม่งั้นเหลืองชวนไปสแกน
+  const waAlert =
+    wa && wa.db && wa.device.enabled
+      ? wa.device.status === "open" && wa.device.group
         ? { ok: true, text: t("waHubGroupReady", { group: wa.device.group }) }
-        : { ok: false, text: t("waHubAlertGroup") };
-    }
-    if (wa.twilio.configured) {
-      return wa.twilio.recipients === 0 ? { ok: false, text: t("waHubAlert") } : { ok: true, text: t("waHubReady", { n: wa.twilio.recipients }) };
-    }
-    return null;
-  })();
+        : { ok: false, text: t("waHubAlertGroup") }
+      : null;
 
   return (
     <div className="min-h-screen">

@@ -29,9 +29,9 @@ trap cleanup EXIT
 
 kill_port "$PORT"; kill_port "$MOCK_PORT"
 node cotester/e2e/mock-chatwoot.mjs > "$LOG_DIR/.mock.log" 2>&1 & MOCK=$!
-# CHAT_ENABLED=1 ให้เทสของระบบแชทยังรันได้ (ใช้งานจริงซ่อนไว้); ตัวแปร Twilio ว่าง + WHATSAPP_DEVICE ว่าง = ไม่ส่ง WhatsApp จริงระหว่างเทส (ค่าใน .env.local ถูกทับ)
+# CHAT_ENABLED=1 ให้เทสของระบบแชทยังรันได้ (ใช้งานจริงซ่อนไว้); WHATSAPP_DEVICE ว่าง = ไม่ส่ง WhatsApp จริงระหว่างเทส (ค่าใน .env.local ถูกทับ)
 # NEXT_DIST_DIR=.next-e2e ให้รันคู่กับ dev server ปกติ (:3400) ได้ — Next 16 ยอมให้ dev server เดียวต่อโฟลเดอร์ .next
-CHAT_ENABLED=1 TWILIO_ACCOUNT_SID= TWILIO_API_KEY_SID= TWILIO_API_KEY_SECRET= TWILIO_AUTH_TOKEN= WHATSAPP_DEVICE= NEXT_DIST_DIR=.next-e2e \
+CHAT_ENABLED=1 WHATSAPP_DEVICE= NEXT_DIST_DIR=.next-e2e \
   UPLOAD_DIR="$PWD/$LOG_DIR/.uploads" CHATWOOT_BASE_URL="http://127.0.0.1:$MOCK_PORT" DATABASE_URL="$TEST_DB_URL" SESSION_SECRET="e2e-session-secret-0123456789" \
   npx next dev -H 127.0.0.1 -p "$PORT" > "$LOG_DIR/.next.log" 2>&1 & NEXT=$!
 

@@ -2,31 +2,21 @@ import { NextResponse } from "next/server";
 import { adminRoute } from "@/lib/adminApi";
 import { dbEnabled } from "@/lib/db";
 import { deviceEnabled, waDevice } from "@/lib/waDevice";
-import {
-  getGroupTarget,
-  isGroupJid,
-  listRecipients,
-  normalizePhone,
-  recentNotifications,
-  saveRecipients,
-  sendGroupTest,
-  sendTest,
-  setGroupTarget,
-  whatsappStatus,
-} from "@/lib/whatsapp";
+import { getGroupTarget, groupName, isGroupJid, recentNotifications, resolveGroupTarget, sendGroupTest, setGroupTarget } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
-/** ภาพรวมสำหรับหน้า /admin/whatsapp — ไม่มีค่าลับ (อุปกรณ์: สถานะ/QR/กลุ่ม, Twilio: ตั้งค่าครบหรือยัง + เบอร์ผู้ส่ง) */
+/** ภาพรวมสำหรับหน้า /admin/whatsapp — สถานะอุปกรณ์/QR, กลุ่ม (เลือกให้เองเมื่อเชื่อมต่อแล้ว), กลุ่มที่เลือกได้, ประวัติการส่ง (ไม่มีค่าลับ) */
 async function view() {
   const d = waDevice();
-  const [group, groups, recipients, recent] = await Promise.all([
-    getGroupTarget(),
-    d.listGroups().catch(() => []),
-    listRecipients(),
-    recentNotifications(),
-  ]);
-  return { db: dbEnabled, device: { ...d.getState(), group, groups }, twilio: whatsappStatus(), recipients, recent };
+  const [group, groups, recent] = await Promise.all([resolveGroupTarget(), d.listGroups().catch(() => []), recentNotifications()]);
+  return {
+    db: dbEnabled,
+    device: { ...d.getState(), group, groups },
+    groupName: groupName(),
+    publicUrl: (process.env.PORTAL_PUBLIC_URL ?? "").trim() || null,
+    recent,
+  };
 }
 
 /** GET ?summary=1 = เฉพาะสถานะย่อ (หน้าหลักทีมไอทีใช้เตือนว่ายังตั้งค่าไม่ครบ) */
@@ -35,22 +25,17 @@ export async function GET(req: Request) {
   return adminRoute(req, async () => {
     if (!summary) return view();
     const s = waDevice().getState();
-    const group = deviceEnabled() ? await getGroupTarget() : null;
-    const t = whatsappStatus();
-    return {
-      db: dbEnabled,
-      device: { enabled: s.enabled, status: s.status, group: group?.name ?? null },
-      twilio: { configured: t.configured, recipients: t.configured ? (await listRecipients()).length : 0 },
-    };
+    const group = deviceEnabled() ? await resolveGroupTarget() : null;
+    return { db: dbEnabled, device: { enabled: s.enabled, status: s.status, group: group?.name ?? null } };
   });
 }
 
-const ACTIONS = new Set(["link", "unlink", "group", "groups", "testGroup", "add", "remove", "test"]);
+const ACTIONS = new Set(["link", "unlink", "group", "groups", "testGroup"]);
 
 /**
- * อุปกรณ์/กลุ่ม: {action:"link"} สร้าง QR/ต่อใหม่ · {action:"unlink"} ยกเลิก · {action:"group", jid} เลือกกลุ่ม · {action:"groups"} โหลดรายชื่อกลุ่มใหม่ · {action:"testGroup"}
- * Twilio: {action:"add", phone, label} · {action:"remove", phone} · {action:"test", phone?} (ไม่ใส่เบอร์ = ทุกเบอร์)
- * ผลลัพธ์ทางธุรกิจ (เบอร์ผิด/ซ้ำ/ยังไม่ตั้งค่า) คืน 200 พร้อม ok:false + error เพื่อให้หน้าเว็บแสดงข้อความได้ตรง
+ * {action:"link"} สร้าง QR/ต่อใหม่ · {action:"unlink"} ยกเลิกการเชื่อมต่อ · {action:"group", jid} เลือกกลุ่ม (jid ว่าง = ล้าง)
+ * {action:"groups"} โหลดรายชื่อกลุ่มใหม่ · {action:"testGroup"} ส่งข้อความทดสอบเข้ากลุ่ม
+ * ผลลัพธ์ทางธุรกิจ (ยังไม่เปิด/กลุ่มผิด/ยังไม่เลือกกลุ่ม) คืน 200 พร้อม ok:false + error ให้หน้าเว็บแสดงข้อความได้ตรง
  */
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -77,7 +62,7 @@ export async function POST(req: Request) {
         }
         case "group": {
           const jid = body?.jid;
-          if (jid === null || jid === "") {
+          if (jid === null || jid === "" || jid === undefined) {
             await setGroupTarget(null);
             return { ok: true, ...(await view()) };
           }
@@ -87,36 +72,11 @@ export async function POST(req: Request) {
           await setGroupTarget({ jid, name });
           return { ok: true, ...(await view()) };
         }
-        case "testGroup": {
+        default: {
           const group = await getGroupTarget();
           if (!group) return { ok: false, error: "no_group", ...(await view()) };
           const result = await sendGroupTest(group);
-          return { ok: result.ok, results: [result], ...(await view()) };
-        }
-        case "add": {
-          const list = await listRecipients();
-          const phone = normalizePhone(body?.phone);
-          const label = String(body?.label ?? "").normalize("NFC").replace(/\s+/g, " ").trim().slice(0, 60);
-          if (!phone) return { ok: false, error: "invalid_phone", ...(await view()) };
-          if (list.some((x) => x.phone === phone)) return { ok: false, error: "duplicate", ...(await view()) };
-          await saveRecipients([...list, { phone, label }]);
-          return { ok: true, ...(await view()) };
-        }
-        case "remove": {
-          const list = await listRecipients();
-          const phone = normalizePhone(body?.phone);
-          await saveRecipients(list.filter((x) => x.phone !== phone));
-          return { ok: true, ...(await view()) };
-        }
-        default: {
-          // test (Twilio)
-          if (!whatsappStatus().configured) return { ok: false, error: "not_configured", ...(await view()) };
-          const list = await listRecipients();
-          const one = body?.phone ? normalizePhone(body.phone) : null;
-          const targets = one ? [one] : list.map((x) => x.phone);
-          if (targets.length === 0) return { ok: false, error: "no_recipients", ...(await view()) };
-          const results = await sendTest(targets);
-          return { ok: results.every((r) => r.ok), results, ...(await view()) };
+          return { ok: result.ok, result, ...(await view()) };
         }
       }
     },

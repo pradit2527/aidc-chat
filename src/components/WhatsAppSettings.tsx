@@ -1,14 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { api, fmtTime } from "@/lib/adminClient";
 import type { AdminUser } from "@/lib/adminTypes";
 import type { Lang } from "@/lib/i18n";
-import { normalizePhone, prettyPhone } from "@/lib/phone";
 import { useLive } from "@/lib/useLive";
 import type { DeviceState, GroupInfo } from "@/lib/waDevice";
-import type { GroupTarget, NotifyLog, Recipient, SendResult, WaStatus } from "@/lib/whatsapp";
+import type { GroupTarget, NotifyLog, SendResult } from "@/lib/whatsapp";
 import { AdminHeader } from "./AdminHeader";
 import { I18nProvider, useI18n } from "./I18n";
 import { Icon } from "./Icon";
@@ -16,16 +15,15 @@ import { Icon } from "./Icon";
 type View = {
   db: boolean;
   device: DeviceState & { group: GroupTarget | null; groups: GroupInfo[] };
-  twilio: WaStatus;
-  recipients: Recipient[];
+  groupName: string;
+  publicUrl: string | null;
   recent: NotifyLog[];
 };
-type ActionRes = View & { ok: boolean; error?: string; results?: SendResult[] };
+type ActionRes = View & { ok: boolean; error?: string; result?: SendResult };
 
 /**
- * หน้าตั้งค่าแจ้งเตือน WhatsApp ของทีมไอที
- * 1) กลุ่ม WhatsApp ผ่านอุปกรณ์ที่เชื่อมต่อ: สแกน QR → เลือกกลุ่ม → ทดสอบ (ช่องทางหลัก)
- * 2) เบอร์โดยตรงผ่าน Twilio (ช่องทางเสริม, พับไว้)  3) ประวัติการส่ง
+ * แจ้งเตือนเข้ากลุ่ม WhatsApp — ตั้งค่าครั้งเดียว: สแกน QR ด้วยเบอร์ของทีมไอทีที่อยู่ในกลุ่ม → ระบบเลือกกลุ่ม "IT support cosi" ให้เอง
+ * → ทุกงานแจ้งใหม่เข้ากลุ่มอัตโนมัติ; มีปุ่มส่งทดสอบ, เปลี่ยนกลุ่ม (กรณีชื่อไม่ตรง) และประวัติการส่ง
  */
 export default function WhatsAppSettings({ user, initialLang }: { user: AdminUser; initialLang: Lang }) {
   return (
@@ -41,21 +39,18 @@ const btnPrimary = "rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold te
 const btnSoft = "rounded-full bg-deep-50 px-3 py-1.5 text-xs font-semibold text-deep-800 ring-1 ring-deep-100 transition hover:bg-deep-100 disabled:opacity-50";
 const btnDanger = "rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-100 transition hover:bg-rose-100 disabled:opacity-50";
 
+const noop = () => () => {};
+const isDevHost = (host: string) => /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(host);
+
 function Settings({ user }: { user: AdminUser }) {
   const { t } = useI18n();
   const [data, setData] = useState<View | null>(null);
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  // กลุ่ม
   const [pick, setPick] = useState<string | null>(null);
-  const [groupResult, setGroupResult] = useState<SendResult | null>(null);
-  const [groupErr, setGroupErr] = useState<string | null>(null);
-  // Twilio
-  const [label, setLabel] = useState("");
-  const [phone, setPhone] = useState("");
-  const [formErr, setFormErr] = useState<"invalid_phone" | "duplicate" | null>(null);
-  const [results, setResults] = useState<Record<string, SendResult>>({});
-  const [testErr, setTestErr] = useState<string | null>(null);
+  const [result, setResult] = useState<SendResult | null>(null);
+  const [actErr, setActErr] = useState<string | null>(null);
+  const host = useSyncExternalStore(noop, () => window.location.host, () => "");
 
   const load = useCallback(
     () =>
@@ -72,10 +67,12 @@ function Settings({ user }: { user: AdminUser }) {
   async function act(body: Record<string, unknown>, key: string): Promise<ActionRes | null> {
     if (busy) return null;
     setBusy(key);
+    setActErr(null);
     try {
       const r = await api<ActionRes>("/api/admin/whatsapp", { json: body });
       setData(r);
       setError(false);
+      if (!r.ok && r.error) setActErr(r.error);
       return r;
     } catch {
       setError(true);
@@ -85,63 +82,34 @@ function Settings({ user }: { user: AdminUser }) {
     }
   }
 
-  // ---- กลุ่ม ----
   const dev = data?.device;
   const linked = dev?.status === "open";
-  const currentJid = dev?.group?.jid ?? "";
+  const group = dev?.group ?? null;
+  const currentJid = group?.jid ?? "";
   const selected = pick ?? currentJid;
 
   async function saveGroup() {
-    setGroupErr(null);
     const g = dev?.groups.find((x) => x.jid === selected);
     const r = await act({ action: "group", jid: selected || null, name: g?.name ?? "" }, "group");
-    if (r && !r.ok) setGroupErr(r.error ?? "error");
     if (r?.ok) setPick(null);
   }
   async function testGroup() {
-    setGroupErr(null);
+    setResult(null);
     const r = await act({ action: "testGroup" }, "testGroup");
-    if (!r) return;
-    if (r.results?.[0]) setGroupResult(r.results[0]);
-    if (!r.ok && r.error) setGroupErr(r.error);
+    if (r?.result) setResult(r.result);
   }
   async function unlink() {
     if (!window.confirm(t("wdUnlinkConfirm"))) return;
-    setGroupResult(null);
+    setResult(null);
     await act({ action: "unlink" }, "unlink");
   }
 
-  // ---- Twilio ----
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    setFormErr(null);
-    const r = await act({ action: "add", phone, label }, "add");
-    if (!r) return;
-    if (!r.ok) setFormErr(r.error === "duplicate" ? "duplicate" : "invalid_phone");
-    else {
-      setPhone("");
-      setLabel("");
-    }
-  }
-  async function test(p?: string) {
-    setTestErr(null);
-    const r = await act({ action: "test", ...(p ? { phone: p } : {}) }, p ? `test:${p}` : "test:all");
-    if (!r) return;
-    if (r.results) setResults((m) => ({ ...m, ...Object.fromEntries(r.results!.map((x) => [x.to, x])) }));
-    if (!r.ok && r.error) setTestErr(r.error);
-  }
-  async function remove(p: string) {
-    if (!window.confirm(t("waRemoveConfirm", { phone: prettyPhone(p) }))) return;
-    await act({ action: "remove", phone: p }, `remove:${p}`);
-  }
-
-  const preview = phone.trim() ? normalizePhone(phone) : null;
-  const twilioReady = Boolean(data?.twilio.configured && data.db);
+  const groupLabel = group?.name || data?.groupName || "";
 
   return (
     <div className="min-h-screen">
       <AdminHeader user={user} barTitle={t("waTitle")} title={t("waTitle")} subtitle={t("waSub")} />
-      <main className="relative z-10 mx-auto -mt-8 grid max-w-5xl gap-4 px-4 pb-10">
+      <main className="relative z-10 mx-auto -mt-8 grid max-w-4xl gap-4 px-4 pb-10">
         {error && (
           <p role="alert" className="card p-4 text-sm text-rose-700">
             {t("admLoadErr")}
@@ -152,14 +120,21 @@ function Settings({ user }: { user: AdminUser }) {
             {t("rcNoDb")}
           </p>
         )}
+        {host && isDevHost(host) && (
+          <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
+            {t("waDevHost", { host, server: data?.publicUrl ?? "http://10.0.100.54:3400" })}
+          </p>
+        )}
 
-        {/* 1) กลุ่ม WhatsApp ผ่านอุปกรณ์ที่เชื่อมต่อ */}
-        <section className="card p-5">
-          <h2 className="flex items-center gap-2 text-base font-semibold">
-            <Icon name="bell" className="h-4 w-4 text-deep-700" />
-            {t("wdTitle")}
-          </h2>
-          <p className="mt-1 text-sm text-stone-500">{t("wdHint")}</p>
+        <section className="card p-5 sm:p-6">
+          <p className="rounded-xl bg-deep-50 p-3 text-sm leading-relaxed text-deep-800 ring-1 ring-deep-100">{t("waWhy")}</p>
+
+          {/* 3 ขั้น: สแกน → ระบบเลือกกลุ่ม → อัตโนมัติ */}
+          <ol className="mt-4 grid gap-2 sm:grid-cols-3">
+            <Step n={1} done={linked} text={t("waStep1")} />
+            <Step n={2} done={Boolean(group)} text={t("waStep2", { group: groupLabel })} />
+            <Step n={3} done={linked && Boolean(group)} text={t("waStep3")} />
+          </ol>
 
           {!dev ? (
             <div className="mt-4 h-10 animate-pulse rounded-xl bg-stone-100" />
@@ -180,167 +155,61 @@ function Settings({ user }: { user: AdminUser }) {
                 )}
               </div>
 
-              <div className="mt-4 rounded-xl bg-stone-50 p-4 ring-1 ring-stone-100">
-                <label className="block text-sm font-medium">
-                  {t("wdGroup")}
-                  <select value={selected} onChange={(e) => setPick(e.target.value)} disabled={!linked || busy !== null} className={field}>
-                    <option value="">{t("wdGroupPick")}</option>
-                    {dev.group && !dev.groups.some((g) => g.jid === dev.group!.jid) && <option value={dev.group.jid}>{dev.group.name || dev.group.jid}</option>}
-                    {dev.groups.map((g) => (
-                      <option key={g.jid} value={g.jid}>
-                        {g.name} · {t("wdMembers", { n: g.size })}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button type="button" onClick={saveGroup} disabled={!linked || busy !== null || selected === currentJid} className={btnPrimary}>
-                    {busy === "group" ? t("saving") : t("wdGroupSave")}
-                  </button>
-                  <button type="button" onClick={() => act({ action: "groups" }, "groups")} disabled={!linked || busy !== null} className={btnSoft}>
-                    {t("wdGroupRefresh")}
-                  </button>
-                  <button type="button" onClick={testGroup} disabled={!linked || !dev.group || busy !== null} className={btnSoft}>
-                    {busy === "testGroup" ? t("waSending") : t("wdTestGroup")}
-                  </button>
-                </div>
-                <p className="mt-3 text-xs text-stone-500">
-                  {!linked
-                    ? t("wdNeedLink")
-                    : dev.groups.length === 0
-                      ? t("wdGroupEmpty")
-                      : dev.group
-                        ? `${t("wdGroup")}: ${dev.group.name}`
-                        : t("wdGroupNone")}
-                </p>
-                {groupErr && (
-                  <p role="alert" className="mt-2 text-sm text-rose-700">
-                    {groupErr === "no_group" ? t("wdNoGroupErr") : groupErr === "device_off" ? t("wdOff") : t("waFailed")}
-                  </p>
-                )}
-                {groupResult && (
-                  <p className="mt-2">
-                    <ResultPill r={groupResult} />
-                  </p>
-                )}
-              </div>
+              {linked && (
+                <div className="mt-4 rounded-xl bg-stone-50 p-4 ring-1 ring-stone-100">
+                  {group ? (
+                    <p className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                      <Icon name="check" className="h-4 w-4" />
+                      {t("waDone", { group: group.name || group.jid })}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-amber-900">{t("wdGroupEmpty", { group: data?.groupName ?? "" })}</p>
+                  )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={testGroup} disabled={!group || busy !== null} className={btnPrimary}>
+                      {busy === "testGroup" ? t("waSending") : t("wdTestGroup")}
+                    </button>
+                    {result && <ResultPill r={result} />}
+                    {actErr && (
+                      <span role="alert" className="text-sm text-rose-700">
+                        {actErr === "no_group" ? t("wdNoGroupErr") : actErr === "device_off" ? t("wdOff") : t("waFailed")}
+                      </span>
+                    )}
+                  </div>
 
-              <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-100">{t("wdWarn")}</p>
+                  {/* เปลี่ยนกลุ่ม — ใช้เมื่อชื่อกลุ่มไม่ตรงกับที่ระบบหาให้ */}
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs font-semibold text-deep-700">{t("wdGroupChange")}</summary>
+                    <label className="mt-2 block text-sm font-medium">
+                      {t("wdGroup")}
+                      <select value={selected} onChange={(e) => setPick(e.target.value)} disabled={busy !== null} className={field}>
+                        <option value="">{t("wdGroupPick")}</option>
+                        {group && !dev.groups.some((g) => g.jid === group.jid) && <option value={group.jid}>{group.name || group.jid}</option>}
+                        {dev.groups.map((g) => (
+                          <option key={g.jid} value={g.jid}>
+                            {g.name} · {t("wdMembers", { n: g.size })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button type="button" onClick={saveGroup} disabled={busy !== null || selected === currentJid} className={btnSoft}>
+                        {busy === "group" ? t("saving") : t("wdGroupSave")}
+                      </button>
+                      <button type="button" onClick={() => act({ action: "groups" }, "groups")} disabled={busy !== null} className={btnSoft}>
+                        {t("wdGroupRefresh")}
+                      </button>
+                    </div>
+                  </details>
+                </div>
+              )}
+
+              <p className="mt-4 text-xs leading-relaxed text-stone-500">{t("wdWarn")}</p>
             </>
           )}
         </section>
 
-        {/* 2) Twilio (เบอร์โดยตรง) — พับไว้ */}
-        <details className="card p-5">
-          <summary className="cursor-pointer text-sm font-semibold">
-            {t("waTwilioSection")}
-            {data && <span className="ml-2 text-xs font-normal text-stone-500">({data.twilio.configured ? t("waReady") : t("waNotConfiguredShort")})</span>}
-          </summary>
-          {!data ? (
-            <div className="mt-3 h-10 animate-pulse rounded-xl bg-stone-100" />
-          ) : (
-            <div className="mt-4 space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Fact label="Twilio" ok={data.twilio.configured} text={data.twilio.configured ? t("waReady") : t("waNotConfigured", { missing: data.twilio.missing.join(", ") })} />
-                <Fact
-                  label={t("waSender")}
-                  ok={data.twilio.configured}
-                  text={
-                    <>
-                      <span className="tabular-nums">{data.twilio.from.replace(/^whatsapp:/, "")}</span>
-                      {data.twilio.sandbox && <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">{t("waSandbox")}</span>}
-                    </>
-                  }
-                />
-              </div>
-              {data.twilio.sandbox && (
-                <p className="rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-900 ring-1 ring-amber-100">
-                  {t("waSandboxHint", { from: data.twilio.from.replace(/^whatsapp:/, "") })}
-                </p>
-              )}
-
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <Icon name="phone" className="h-4 w-4 text-deep-700" />
-                  {t("waRecipients")}
-                  <span className="text-xs font-normal text-stone-500">({data.recipients.length})</span>
-                </h3>
-                {data.recipients.length > 0 && (
-                  <button type="button" onClick={() => test()} disabled={!twilioReady || busy !== null} className={btnSoft}>
-                    {busy === "test:all" ? t("waSending") : t("waTestAll")}
-                  </button>
-                )}
-              </div>
-              {testErr && (
-                <p role="alert" className="text-sm text-rose-700">
-                  {testErr === "not_configured" ? t("waNotConfiguredShort") : testErr === "no_recipients" ? t("waNoRecipients") : t("waFailed")}
-                </p>
-              )}
-              {data.recipients.length === 0 ? (
-                <p className="text-sm text-stone-400">{t("waNoRecipients")}</p>
-              ) : (
-                <ul className="divide-y divide-stone-100">
-                  {data.recipients.map((r) => (
-                    <li key={r.phone} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-deep-700 text-white">
-                        <Icon name="user" className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{r.label || prettyPhone(r.phone)}</span>
-                        {r.label && <span className="block text-xs tabular-nums text-stone-500">{prettyPhone(r.phone)}</span>}
-                        {results[r.phone] && (
-                          <span className="mt-1 block">
-                            <ResultPill r={results[r.phone]} />
-                          </span>
-                        )}
-                      </span>
-                      <span className="flex shrink-0 items-center gap-1.5">
-                        <button type="button" onClick={() => test(r.phone)} disabled={!twilioReady || busy !== null} className={btnSoft}>
-                          {busy === `test:${r.phone}` ? t("waSending") : t("waTest")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => remove(r.phone)}
-                          disabled={busy !== null}
-                          aria-label={t("waRemove")}
-                          title={t("waRemove")}
-                          className="grid h-8 w-8 place-items-center rounded-full bg-rose-50 text-rose-700 ring-1 ring-rose-100 transition hover:bg-rose-100 disabled:opacity-50"
-                        >
-                          <Icon name="trash" className="h-4 w-4" />
-                        </button>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <form onSubmit={add} className="grid gap-3 rounded-xl bg-stone-50 p-4 ring-1 ring-stone-100 sm:grid-cols-[1fr_1.4fr_auto] sm:items-end">
-                <label className="block text-sm font-medium">
-                  {t("waLabel")}
-                  <input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} className={field} />
-                </label>
-                <label className="block text-sm font-medium">
-                  {t("waPhone")}
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" required placeholder="+856 20 1234 5678" className={field} />
-                </label>
-                <button type="submit" disabled={!data.db || busy !== null || !preview} className={btnPrimary}>
-                  {busy === "add" ? t("saving") : t("waAdd")}
-                </button>
-                <p className={`text-xs sm:col-span-3 ${formErr ? "text-rose-700" : "text-stone-500"}`} role={formErr ? "alert" : undefined}>
-                  {formErr === "duplicate"
-                    ? t("waDuplicate")
-                    : formErr === "invalid_phone" || (phone.trim() && !preview)
-                      ? t("waPhoneInvalid")
-                      : preview
-                        ? t("waWillSave", { phone: prettyPhone(preview) })
-                        : " "}
-                </p>
-              </form>
-            </div>
-          )}
-        </details>
-
-        {/* 3) ประวัติ */}
+        {/* ประวัติ */}
         <section className="card p-5">
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <Icon name="list" className="h-4 w-4 text-deep-700" />
@@ -353,22 +222,17 @@ function Settings({ user }: { user: AdminUser }) {
           ) : (
             <ul className="mt-2 divide-y divide-stone-100">
               {data.recent.map((n) => (
-                <li key={n.id} className="py-2.5 text-sm">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <a href={`/admin/reports?r=${n.reportId}`} className="font-semibold tabular-nums text-brand-700 hover:underline">
-                      {n.ticketNo}
-                    </a>
-                    <span className="text-xs tabular-nums text-stone-500">{fmtTime(n.at)}</span>
-                  </div>
-                  <ul className="mt-1 grid gap-1">
-                    {n.results.map((r, i) => (
-                      <li key={`${r.channel}:${r.to}:${i}`} className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="rounded-full bg-stone-100 px-2 py-0.5 font-semibold text-stone-600">{r.channel === "group" ? t("waChannelGroup") : "Twilio"}</span>
-                        <span className="tabular-nums text-stone-600">{r.channel === "group" ? r.to : prettyPhone(r.to)}</span>
-                        <ResultPill r={r} />
-                      </li>
-                    ))}
-                  </ul>
+                <li key={n.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-sm">
+                  <a href={`/admin/reports?r=${n.reportId}`} className="font-semibold tabular-nums text-brand-700 hover:underline">
+                    {n.ticketNo}
+                  </a>
+                  <span className="text-xs tabular-nums text-stone-500">{fmtTime(n.at)}</span>
+                  {n.results.map((r, i) => (
+                    <span key={i} className="flex items-center gap-2 text-xs">
+                      <span className="text-stone-600">{r.to}</span>
+                      <ResultPill r={r} />
+                    </span>
+                  ))}
                 </li>
               ))}
             </ul>
@@ -379,7 +243,18 @@ function Settings({ user }: { user: AdminUser }) {
   );
 }
 
-/** แถวสถานะอุปกรณ์: จุดสี + ข้อความ + ปุ่มเชื่อมต่อ/ยกเลิก ตามสถานะ */
+function Step({ n, done, text }: { n: number; done: boolean; text: string }) {
+  return (
+    <li className={`flex items-start gap-2 rounded-xl p-3 text-sm ring-1 ${done ? "bg-emerald-50 text-emerald-900 ring-emerald-100" : "bg-white text-stone-700 ring-stone-200"}`}>
+      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${done ? "bg-emerald-600 text-white" : "bg-brand-500 text-white"}`}>
+        {done ? <Icon name="check" className="h-3.5 w-3.5" /> : n}
+      </span>
+      <span>{text}</span>
+    </li>
+  );
+}
+
+/** แถวสถานะอุปกรณ์: จุดสี + ข้อความ + ปุ่มสร้าง QR / ยกเลิก ตามสถานะ */
 function DeviceStatusRow({ dev, busy, onLink, onUnlink }: { dev: DeviceState; busy: string | null; onLink: () => void; onUnlink: () => void }) {
   const { t } = useI18n();
   const s = dev.status;
@@ -422,35 +297,15 @@ function DeviceStatusRow({ dev, busy, onLink, onUnlink }: { dev: DeviceState; bu
   );
 }
 
-function Fact({ label, ok, text }: { label: string; ok: boolean; text: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-stone-200 p-3">
-      <div className="flex items-center gap-2 text-xs text-stone-500">
-        <span className={`inline-block h-2.5 w-2.5 rounded-full ${ok ? "bg-emerald-500" : "bg-rose-500"}`} aria-hidden />
-        {label}
-      </div>
-      <div className="mt-1 text-sm font-medium text-stone-800">{text}</div>
-    </div>
-  );
-}
-
-/** ผลการส่ง 1 ข้อความ: เขียว = ถึงแล้ว/ส่งเข้ากลุ่มแล้ว, ฟ้า = Twilio รับแล้วรอยืนยัน, แดง = ล้มเหลว (+ รหัส/ข้อความ และคำแนะนำ) */
+/** ผลการส่ง 1 ข้อความ: เขียว = เข้ากลุ่มแล้ว, แดง = ล้มเหลว (+ เหตุผล) */
 function ResultPill({ r }: { r: SendResult }) {
   const { t } = useI18n();
-  const good = r.status === "delivered" || r.status === "read" || (r.channel === "group" && r.ok);
-  const pending = r.ok && !good;
-  const cls = good ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : pending ? "bg-sky-50 text-sky-700 ring-sky-100" : "bg-rose-50 text-rose-700 ring-rose-100";
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5 text-xs">
-      <span className={`rounded-full px-2 py-0.5 font-semibold ring-1 ${cls}`}>{good ? t("waDelivered") : pending ? t("waSent") : t("waFailed")}</span>
-      {!r.ok && (r.code || r.message) && (
-        <span className="text-rose-700">
-          {r.code ? `${r.code} ` : ""}
-          {r.status === "not_linked" ? t("wdNotLinkedErr") : r.message}
-        </span>
-      )}
-      {r.code === 63016 && <span className="text-stone-500">{t("waWindowHint")}</span>}
-      {(r.code === 20003 || r.code === 401) && <span className="text-stone-500">{t("waAuthHint")}</span>}
+      <span className={`rounded-full px-2 py-0.5 font-semibold ring-1 ${r.ok ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-rose-50 text-rose-700 ring-rose-100"}`}>
+        {r.ok ? t("waSent") : t("waFailed")}
+      </span>
+      {!r.ok && <span className="text-rose-700">{r.status === "not_linked" ? t("wdNotLinkedErr") : r.message}</span>}
     </span>
   );
 }

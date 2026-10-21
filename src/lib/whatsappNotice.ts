@@ -1,9 +1,9 @@
-// ข้อความแจ้งเตือน WhatsApp (ตรรกะล้วน — ทดสอบได้โดยไม่ต้องมี Twilio): งานแจ้งปัญหาใหม่ + ข้อความทดสอบ
+// ข้อความแจ้งเตือนเข้ากลุ่ม WhatsApp (ตรรกะล้วน — ทดสอบได้โดยไม่ต้องเชื่อมต่อ WhatsApp): งานแจ้งปัญหาใหม่ + ข้อความทดสอบ
 import { CATEGORIES, DEPARTMENTS } from "./categories";
 import type { ReportDTO } from "./reports";
 import { laoTime, ticketDate } from "./tickets";
 
-/** Twilio จำกัดเนื้อหา WhatsApp 1,600 ตัวอักษร — เผื่อไว้ให้ปลอดภัย */
+/** จำกัดความยาวข้อความให้อ่านง่ายในมือถือ (ข้อเยอะเกินให้เปิดดูในระบบแทน) */
 export const WHATSAPP_BODY_MAX = 1500;
 
 export type NoticeReport = Pick<ReportDTO, "ticketNo" | "name" | "department" | "contact" | "urgent" | "createdAt" | "items" | "files">;

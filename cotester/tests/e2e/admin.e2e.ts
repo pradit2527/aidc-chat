@@ -289,48 +289,42 @@ describe("8. สถิติจากทะเบียน", () => {
   });
 });
 
-describe("8b. ตั้งค่าแจ้งเตือน WhatsApp (/admin/whatsapp) — ในเทสปิดอุปกรณ์ (WHATSAPP_DEVICE ว่าง) และไม่มีคีย์ Twilio", () => {
+describe("8b. แจ้งเตือนเข้ากลุ่ม WhatsApp (/admin/whatsapp) — ในเทสปิดอุปกรณ์ (WHATSAPP_DEVICE ว่าง) จึงไม่แตะ WhatsApp จริง", () => {
   type WaView = {
     db: boolean;
     device: { enabled: boolean; status: string; group: unknown; groups: unknown[] };
-    twilio: { configured: boolean; sandbox: boolean };
-    recipients: { phone: string; label: string }[];
+    groupName: string;
     recent: unknown[];
     ok?: boolean;
     error?: string;
   };
   const wa = (json?: unknown) => (json === undefined ? c.get("/api/admin/whatsapp") : c.post("/api/admin/whatsapp", json)).then((r) => ({ status: r.status, j: r.json as WaView }));
 
-  test("หน้าเปิดได้หลังล็อกอิน; API: ฐานข้อมูลพร้อม อุปกรณ์ปิด (off) Twilio ยังไม่ตั้งค่า ไม่มีผู้รับ", async () => {
+  test("หน้าเปิดได้หลังล็อกอิน; API: ฐานข้อมูลพร้อม อุปกรณ์ปิด (off) ยังไม่มีกลุ่ม ชื่อกลุ่มอัตโนมัติ = IT support cosi", async () => {
     const page = await c.get("/admin/whatsapp");
     expect(page.status).toBe(200);
     expect(page.text).toContain("WhatsApp");
+    expect(page.text).not.toContain("Twilio");
     expect(page.text).not.toMatch(/type="password"/);
     const { status, j } = await wa();
     expect(status).toBe(200);
     expect(j.db).toBe(true);
     expect(j.device).toMatchObject({ enabled: false, status: "off", group: null, groups: [] });
-    expect(j.twilio).toMatchObject({ configured: false, sandbox: true });
-    expect(j.recipients).toEqual([]);
+    expect(j.groupName).toBe("IT support cosi");
+    expect(Array.isArray(j.recent)).toBe(true);
     const sum = (await c.get("/api/admin/whatsapp?summary=1")).json as Record<string, unknown>;
-    expect(sum).toEqual({ db: true, device: { enabled: false, status: "off", group: null }, twilio: { configured: false, recipients: 0 } });
+    expect(sum).toEqual({ db: true, device: { enabled: false, status: "off", group: null } });
   });
-  test("เบอร์ผู้รับ Twilio: เพิ่ม (020… → +85620…), ซ้ำ → duplicate, ผิด → invalid_phone, ลบแล้วว่าง", async () => {
-    const add = await wa({ action: "add", phone: "020 5555 1234", label: "  IT  Test " });
-    expect(add.j.ok).toBe(true);
-    expect(add.j.recipients).toEqual([{ phone: "+8562055551234", label: "IT Test" }]);
-    expect((await wa({ action: "add", phone: "+856 20 5555 1234", label: "again" })).j).toMatchObject({ ok: false, error: "duplicate" });
-    expect((await wa({ action: "add", phone: "12", label: "x" })).j).toMatchObject({ ok: false, error: "invalid_phone" });
-    expect((await wa()).j.recipients).toHaveLength(1);
-    const rm = await wa({ action: "remove", phone: "+8562055551234" });
-    expect(rm.j.ok).toBe(true);
-    expect(rm.j.recipients).toEqual([]);
-  });
-  test("link เมื่ออุปกรณ์ปิด → device_off; กลุ่ม jid ผิด → invalid_group; testGroup ไม่มีกลุ่ม → no_group; test Twilio ไม่ตั้งค่า → not_configured", async () => {
+  test("link เมื่ออุปกรณ์ปิด → device_off; กลุ่ม jid ผิด → invalid_group; กลุ่มที่ถูกต้องบันทึก/ล้างได้; testGroup ไม่มีกลุ่ม → no_group", async () => {
     expect((await wa({ action: "link" })).j).toMatchObject({ ok: false, error: "device_off" });
     expect((await wa({ action: "group", jid: "nope" })).j).toMatchObject({ ok: false, error: "invalid_group" });
+    const set = await wa({ action: "group", jid: "120363000000000001@g.us", name: "IT support cosi (test)" });
+    expect(set.j.ok).toBe(true);
+    expect(set.j.device.group).toEqual({ jid: "120363000000000001@g.us", name: "IT support cosi (test)" });
+    const clear = await wa({ action: "group", jid: "" });
+    expect(clear.j.ok).toBe(true);
+    expect(clear.j.device.group).toBeNull();
     expect((await wa({ action: "testGroup" })).j).toMatchObject({ ok: false, error: "no_group" });
-    expect((await wa({ action: "test" })).j).toMatchObject({ ok: false, error: "not_configured" });
   });
   test("action แปลก → 400, Origin แปลก → 403, ไม่ล็อกอิน → 401 และหน้าเด้งไป /admin", async () => {
     expect((await c.post("/api/admin/whatsapp", { action: "nope" })).status).toBe(400);
