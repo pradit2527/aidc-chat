@@ -14,10 +14,10 @@ export type NoticeReport = Pick<ReportDTO, "ticketNo" | "name" | "department" | 
  */
 export function formatReportNotice(r: NoticeReport, link: string): string {
   const dept = DEPARTMENTS.find((d) => d.id === r.department)?.label.lo ?? r.department;
-  // ขึ้นต้นตามที่ผู้ใช้ต้องการ: "คุณ xxx ได้แจ้งปัญหาในระบบ Ticket แล้ว" แล้วค่อยตามด้วยรายละเอียด
+  // เลขตั๋วบรรทัดแรก (ผู้ใช้สั่ง — เห็นทันทีในแจ้งเตือนมือถือ) ตามด้วย "คุณ xxx ได้แจ้งปัญหาในระบบ Ticket แล้ว" และรายละเอียด
   const head = [
+    `🎫 *${r.ticketNo}*${r.urgent ? " · 🔴 *ດ່ວນ*" : ""}`,
     `🆕 ທ່ານ *${r.name}*${dept ? ` (${dept})` : ""} ໄດ້ແຈ້ງບັນຫາໃນລະບົບ Ticket ແລ້ວ`,
-    `🎫 ເລກທີ *${r.ticketNo}*${r.urgent ? " · 🔴 *ດ່ວນ*" : ""}`,
     `🕒 ${ticketDate(r.createdAt)} ${laoTime(r.createdAt)}${r.contact ? ` · ☎ ${r.contact}` : ""}`,
     "",
   ];
